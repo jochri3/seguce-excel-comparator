@@ -52,7 +52,7 @@ const upload = multer({
 
 // Routes
 app.get("/", (req, res) => {
-  res.render("index", { title: "Réconciliation API" });
+  res.render("index", { title: "SEGUGE Sages reconciliation" });
 });
 
 // Route pour traiter l'upload des deux fichiers Excel
