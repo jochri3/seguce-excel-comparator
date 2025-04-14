@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <%- include('partials/header') %>
+    <title><%= title %></title>
+</head>
+<body>
+    <div class="container">
+        <header class="my-5 text-center">
+            <h1><%= title %></h1>
+            <p class="lead">Comparer deux fichiers de paie pour réconcilier les données</p>
+        </header>
+
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card shadow">
+                    <div class="card-header bg-primary text-white">
+                        <h3 class="card-title mb-0">Upload des fichiers</h3>
+                    </div>
+                    <div class="card-body">
+                        <form action="/compare" method="POST" enctype="multipart/form-data">
+                            <div class="mb-4">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-3">
+                                            <label for="fileA" class="form-label fw-bold">Fichier A (Entreprise )</label>
+                                            <div class="input-group">
+                                                <input type="file" class="form-control" id="fileA" name="fileA" accept=".xlsx,.xls" required>
+                                            </div>
+                                            <small class="text-muted">Fichier de l'entreprise spécialisée</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-3">
+                                            <label for="fileB" class="form-label fw-bold">Fichier B (Client : SEGUCE)</label>
+                                            <div class="input-group">
+                                                <input type="file" class="form-control" id="fileB" name="fileB" accept=".xlsx,.xls" required>
+                                            </div>
+                                            <small class="text-muted">Fichier de l'entreprise cliente</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle-fill me-2"></i>
+                                <strong>Note:</strong> Les fichiers doivent contenir une colonne "Matricule Fictif" qui servira d'identifiant unique pour la comparaison.
+                            </div>
+
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    <i class="bi bi-arrow-repeat me-2"></i>Comparer les fichiers
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card mt-4 shadow">
+                    <div class="card-header bg-info text-white">
+                        <h3 class="card-title mb-0">Instructions</h3>
+                    </div>
+                    <div class="card-body">
+                        <ol class="mb-0">
+                            <li>Uploadez le fichier Excel provenant de l'entreprise spécialisée (Fichier A)</li>
+                            <li>Uploadez votre fichier Excel interne pour la réconciliation (Fichier B)</li>
+                            <li>Cliquez sur "Comparer les fichiers" pour lancer l'analyse</li>
+                            <li>Examinez les différences identifiées dans les résultats</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <div class="card mt-4 shadow">
+                    <div class="card-header bg-light">
+                        <h3 class="card-title mb-0">Format attendu</h3>
+                    </div>
+                    <div class="card-body">
+                        <p>L'application s'attend à recevoir des fichiers Excel avec le format suivant :</p>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Matricule Fictif</th>
+                                        <th>Pers. à Charge</th>
+                                        <th>Enfant Légal</th>
+                                        <th>Jr. Prestés</th>
+                                        <th>...</th>
+                                        <th>Total Employeur Mensuel</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>1012</td>
+                                        <td>0</td>
+                                        <td>0</td>
+                                        <td>26.00</td>
+                                        <td>...</td>
+                                        <td>1,621.50</td>
+                                    </tr>
+                                    <tr>
+                                        <td>1013</td>
+                                        <td>1</td>
+                                        <td>0</td>
+                                        <td>26.00</td>
+                                        <td>...</td>
+                                        <td>1,123.12</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <p class="text-muted mt-2"><small>La colonne "Matricule Fictif" est utilisée comme identifiant unique pour comparer les enregistrements entre les deux fichiers.</small></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <%- include('partials/footer') %>
+
+    <script>
+        // Validation des fichiers Excel
+        document.querySelectorAll('input[type="file"]').forEach(input => {
+            input.addEventListener('change', function() {
+                const fileExtension = this.value.split('.').pop().toLowerCase();
+                if (!['xlsx', 'xls'].includes(fileExtension)) {
+                    alert('Veuillez sélectionner un fichier Excel (.xlsx ou .xls)');
+                    this.value = '';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
