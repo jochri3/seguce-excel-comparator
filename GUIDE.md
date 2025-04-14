@@ -1,4 +1,4 @@
-# Application de Réconciliation APEI
+# Application de Réconciliation paie
 
 Une application web Node.js permettant de comparer et réconcilier deux fichiers Excel contenant des données APEI (Allocations Pour Enfants et Invalides).
 
@@ -21,7 +21,7 @@ Une application web Node.js permettant de comparer et réconcilier deux fichiers
 ## Structure du projet
 
 ```
-/apei-reconciliation
+/paie-reconciliation
 │
 ├── /public              # Fichiers statiques
 │   ├── /css             # Feuilles de style

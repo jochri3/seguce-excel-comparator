@@ -15,6 +15,182 @@
             </div>
         </header>
 
+        <!-- Tableau de synthèse -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow">
+                    <div class="card-header bg-dark text-white">
+                        <h3 class="card-title mb-0">Synthèse globale</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <h4 class="text-primary mb-3">Informations générales</h4>
+                                <table class="table table-bordered table-striped">
+                                    <tbody>
+                                        <tr>
+                                            <th>Nombre de lignes (Fichier A)</th>
+                                            <td><%= comparisonResult.summary.totalRows.fileA %></td>
+                                        </tr>
+                                        <tr>
+                                            <th>Nombre de lignes (Fichier B)</th>
+                                            <td><%= comparisonResult.summary.totalRows.fileB %></td>
+                                        </tr>
+                                        <tr>
+                                            <th>Nombre de matricules contrôlés</th>
+                                            <td><%= summary.matriculeCount %></td>
+                                        </tr>
+                                        <tr>
+                                            <th>Présence de doublons</th>
+                                            <td><%= summary.hasDuplicates ? 'OUI' : 'NON' %></td>
+                                        </tr>
+                                        <tr>
+                                            <th>Nombre de différences</th>
+                                            <td class="<%= summary.errorCount > 0 ? 'text-danger fw-bold' : '' %>">
+                                                <%= summary.errorCount %>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <h4 class="text-primary mb-3">Actions</h4>
+                                <div class="d-grid gap-2">
+                                    <a href="/" class="btn btn-primary">
+                                        <i class="bi bi-arrow-left me-2"></i>Retour à l'accueil
+                                    </a>
+                                    <button id="printBtn" class="btn btn-secondary">
+                                        <i class="bi bi-printer me-2"></i>Imprimer les résultats
+                                    </button>
+                                    <a href="/export-excel" class="btn btn-success">
+                                        <i class="bi bi-file-earmark-excel me-2"></i>Exporter en Excel
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <h4 class="text-primary mb-3">Récapitulatif des montants clés</h4>
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-striped">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th scope="col">Rubrique</th>
+                                        <th scope="col">Fichier A (Entreprise)</th>
+                                        <th scope="col">Fichier B (Client)</th>
+                                        <th scope="col">Différence</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <th colspan="4" class="table-secondary">Charges salariales</th>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">Cnss QPO</th>
+                                        <td class="text-end"><%= summary.totals.fileA['Cnss QPO'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                        <td class="text-end"><%= summary.totals.fileB['Cnss QPO'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                        <td class="text-end <%= (summary.totals.fileA['Cnss QPO'] - summary.totals.fileB['Cnss QPO']) !== 0 ? 'text-danger' : '' %>">
+                                            <%= (summary.totals.fileA['Cnss QPO'] - summary.totals.fileB['Cnss QPO']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">IPR</th>
+                                        <td class="text-end"><%= summary.totals.fileA['IPR'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                        <td class="text-end"><%= summary.totals.fileB['IPR'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                        <td class="text-end <%= (summary.totals.fileA['IPR'] - summary.totals.fileB['IPR']) !== 0 ? 'text-danger' : '' %>">
+                                            <%= (summary.totals.fileA['IPR'] - summary.totals.fileB['IPR']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th colspan="4" class="table-secondary">Charges patronales</th>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">Cnss QPP</th>
+                                        <td class="text-end"><%= summary.totals.fileA['Cnss QPP'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                        <td class="text-end"><%= summary.totals.fileB['Cnss QPP'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                        <td class="text-end <%= (summary.totals.fileA['Cnss QPP'] - summary.totals.fileB['Cnss QPP']) !== 0 ? 'text-danger' : '' %>">
+                                            <%= (summary.totals.fileA['Cnss QPP'] - summary.totals.fileB['Cnss QPP']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">Inpp</th>
+                                        <td class="text-end"><%= summary.totals.fileA['Inpp'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                        <td class="text-end"><%= summary.totals.fileB['Inpp'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                        <td class="text-end <%= (summary.totals.fileA['Inpp'] - summary.totals.fileB['Inpp']) !== 0 ? 'text-danger' : '' %>">
+                                            <%= (summary.totals.fileA['Inpp'] - summary.totals.fileB['Inpp']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">Onem</th>
+                                        <td class="text-end"><%= summary.totals.fileA['Onem'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                        <td class="text-end"><%= summary.totals.fileB['Onem'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                        <td class="text-end <%= (summary.totals.fileA['Onem'] - summary.totals.fileB['Onem']) !== 0 ? 'text-danger' : '' %>">
+                                            <%= (summary.totals.fileA['Onem'] - summary.totals.fileB['Onem']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">Total Charge Patronale</th>
+                                        <td class="text-end"><%= summary.totals.fileA['Total Charge Patronale'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                        <td class="text-end"><%= summary.totals.fileB['Total Charge Patronale'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                        <td class="text-end <%= (summary.totals.fileA['Total Charge Patronale'] - summary.totals.fileB['Total Charge Patronale']) !== 0 ? 'text-danger' : '' %>">
+                                            <%= (summary.totals.fileA['Total Charge Patronale'] - summary.totals.fileB['Total Charge Patronale']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">Coût Salarial</th>
+                                        <td class="text-end"><%= summary.totals.fileA['Coût Salarial'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                        <td class="text-end"><%= summary.totals.fileB['Coût Salarial'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                        <td class="text-end <%= (summary.totals.fileA['Coût Salarial'] - summary.totals.fileB['Coût Salarial']) !== 0 ? 'text-danger' : '' %>">
+                                            <%= (summary.totals.fileA['Coût Salarial'] - summary.totals.fileB['Coût Salarial']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">Masse Salariale</th>
+                                        <td class="text-end"><%= summary.totals.fileA['Masse Salariale'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                        <td class="text-end"><%= summary.totals.fileB['Masse Salariale'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                        <td class="text-end <%= (summary.totals.fileA['Masse Salariale'] - summary.totals.fileB['Masse Salariale']) !== 0 ? 'text-danger' : '' %>">
+                                            <%= (summary.totals.fileA['Masse Salariale'] - summary.totals.fileB['Masse Salariale']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">Net à Payer</th>
+                                        <td class="text-end"><%= summary.totals.fileA['Net à Payer'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                        <td class="text-end"><%= summary.totals.fileB['Net à Payer'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                        <td class="text-end <%= (summary.totals.fileA['Net à Payer'] - summary.totals.fileB['Net à Payer']) !== 0 ? 'text-danger' : '' %>">
+                                            <%= (summary.totals.fileA['Net à Payer'] - summary.totals.fileB['Net à Payer']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">Frais de Services</th>
+                                        <td class="text-end"><%= summary.totals.fileA['Frais de Services'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                        <td class="text-end"><%= summary.totals.fileB['Frais de Services'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                        <td class="text-end <%= (summary.totals.fileA['Frais de Services'] - summary.totals.fileB['Frais de Services']) !== 0 ? 'text-danger' : '' %>">
+                                            <%= (summary.totals.fileA['Frais de Services'] - summary.totals.fileB['Frais de Services']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">TVA 16% Frais Services</th>
+                                        <td class="text-end"><%= summary.totals.fileA['TVA 16% Frais Services'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                        <td class="text-end"><%= summary.totals.fileB['TVA 16% Frais Services'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                        <td class="text-end <%= (summary.totals.fileA['TVA 16% Frais Services'] - summary.totals.fileB['TVA 16% Frais Services']) !== 0 ? 'text-danger' : '' %>">
+                                            <%= (summary.totals.fileA['TVA 16% Frais Services'] - summary.totals.fileB['TVA 16% Frais Services']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                                        </td>
+                                    </tr>
+                                    <tr class="table-primary fw-bold">
+                                        <th scope="row">Total Employeur Mensuel</th>
+                                        <td class="text-end"><%= summary.totals.fileA['Total Employeur Mensuel'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                        <td class="text-end"><%= summary.totals.fileB['Total Employeur Mensuel'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                        <td class="text-end <%= (summary.totals.fileA['Total Employeur Mensuel'] - summary.totals.fileB['Total Employeur Mensuel']) !== 0 ? 'text-danger fw-bold' : '' %>">
+                                            <%= (summary.totals.fileA['Total Employeur Mensuel'] - summary.totals.fileB['Total Employeur Mensuel']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="row mb-4">
             <div class="col-12">
                 <div class="card shadow">
@@ -50,12 +226,12 @@
                         </div>
 
                         <% if (comparisonResult.summary.columnDifferences.length > 0) { %>
-                            <h4 class="mt-4">Différences par colonne</h4>
+                            <!-- <h4 class="mt-4">Différences par colonne</h4>
                             <div class="input-group mb-3">
                                 <span class="input-group-text">Rechercher</span>
                                 <input type="text" class="form-control" id="searchColumns" placeholder="Filtrer les colonnes...">
-                            </div>
-                            <div class="table-responsive">
+                            </div> -->
+                            <!-- <div class="table-responsive">
                                 <table class="table table-striped table-hover" id="columnsTable">
                                     <thead class="table-dark">
                                         <tr>
@@ -78,7 +254,7 @@
                                         <% }); %>
                                     </tbody>
                                 </table>
-                            </div>
+                            </div> -->
                         <% } else { %>
                             <div class="alert alert-success mt-4">
                                 <i class="bi bi-check-circle-fill me-2"></i>
@@ -225,18 +401,6 @@
                 </div>
             </div>
         </div>
-
-        <div class="mt-4 text-center mb-5">
-            <a href="/" class="btn btn-primary btn-lg">
-                <i class="bi bi-arrow-left me-2"></i>Retour à l'accueil
-            </a>
-            <button id="printBtn" class="btn btn-success btn-lg ms-2">
-                <i class="bi bi-printer me-2"></i>Imprimer les résultats
-            </button>
-            <button id="exportBtn" class="btn btn-info btn-lg ms-2">
-                <i class="bi bi-file-earmark-excel me-2"></i>Exporter en Excel
-            </button>
-        </div>
     </div>
 
     <%- include('partials/footer') %>
@@ -263,7 +427,7 @@
         document.getElementById('printBtn').addEventListener('click', function() {
             window.print();
         });
-
+        
         // Fonctionnalité de recherche dans les résultats
         document.getElementById('searchResults').addEventListener('input', function() {
             const searchTerm = this.value.toLowerCase();

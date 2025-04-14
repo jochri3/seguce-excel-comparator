@@ -4,6 +4,7 @@ const path = require("path");
 const fs = require("fs");
 const XLSX = require("xlsx");
 const excelParser = require("./utils/excel-parser");
+const excelExport = require("./utils/export-excel");
 
 // Configuration de l'application
 const app = express();
@@ -86,12 +87,21 @@ app.post(
         fileBData
       );
 
+      // Stocker les résultats dans la session pour les exports
+      req.app.locals.lastComparisonResult = comparisonResult;
+      req.app.locals.fileAName = fileAName;
+      req.app.locals.fileBName = fileBName;
+
+      // Calculer les totaux pour l'affichage
+      const summary = calculateSummaryData(comparisonResult);
+
       // Rendre la page de comparaison avec les résultats
       res.render("compare", {
         title: "Résultats de la réconciliation",
         fileAName,
         fileBName,
         comparisonResult,
+        summary,
       });
 
       // Nettoyer les fichiers uploadés après traitement (optionnel)
@@ -110,6 +120,160 @@ app.post(
     }
   }
 );
+
+// Route pour exporter les résultats en Excel
+app.get("/export-excel", (req, res) => {
+  try {
+    const comparisonResult = req.app.locals.lastComparisonResult;
+    const fileAName = req.app.locals.fileAName;
+    const fileBName = req.app.locals.fileBName;
+
+    if (!comparisonResult) {
+      return res
+        .status(400)
+        .send(
+          "Aucun résultat de comparaison disponible. Veuillez d'abord comparer deux fichiers."
+        );
+    }
+
+    // Générer le fichier Excel
+    const excelBuffer = excelExport.exportToExcel(
+      comparisonResult,
+      fileAName,
+      fileBName
+    );
+
+    // Envoyer le fichier au client
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=reconciliation_paie.xlsx"
+    );
+    return res.send(excelBuffer);
+  } catch (error) {
+    console.error("Erreur lors de l'export Excel:", error);
+    res
+      .status(500)
+      .send("Une erreur est survenue lors de l'export: " + error.message);
+  }
+});
+
+// Fonction pour calculer les données de synthèse
+function calculateSummaryData(comparisonResult) {
+  // Initialiser les totaux
+  const totals = {
+    fileA: {
+      "Cnss QPO": 0,
+      IPR: 0,
+      "Cnss QPP": 0,
+      Inpp: 0,
+      Onem: 0,
+      "Total Charge Patronale": 0,
+      "Coût Salarial": 0,
+      "Masse Salariale": 0,
+      "Net à Payer": 0,
+      "Net à Payer arrondi": 0,
+      "Frais de Services": 0,
+      "TVA 16% Frais Services": 0,
+      "Total Employeur Mensuel": 0,
+    },
+    fileB: {
+      "Cnss QPO": 0,
+      IPR: 0,
+      "Cnss QPP": 0,
+      Inpp: 0,
+      Onem: 0,
+      "Total Charge Patronale": 0,
+      "Coût Salarial": 0,
+      "Masse Salariale": 0,
+      "Net à Payer": 0,
+      "Net à Payer arrondi": 0,
+      "Frais de Services": 0,
+      "TVA 16% Frais Services": 0,
+      "Total Employeur Mensuel": 0,
+    },
+  };
+
+  // Vérifier les doublons de matricules
+  const matricules = new Set();
+  comparisonResult.details.forEach((detail) => {
+    if (detail.id) {
+      matricules.add(detail.id);
+    }
+  });
+
+  const hasDuplicates =
+    matricules.size < comparisonResult.summary.totalRows.fileA ||
+    matricules.size < comparisonResult.summary.totalRows.fileB;
+
+  // Détecter les colonnes qui correspondent aux totaux que nous recherchons
+  const detectColumn = (columnName) => {
+    const normalizedName = columnName.toLowerCase().replace(/\s+/g, "");
+
+    if (normalizedName.includes("cnssqpo") || normalizedName.includes("qpo"))
+      return "Cnss QPO";
+    if (normalizedName.includes("ipr")) return "IPR";
+    if (normalizedName.includes("cnssqpp") || normalizedName.includes("qpp"))
+      return "Cnss QPP";
+    if (normalizedName.includes("inpp")) return "Inpp";
+    if (normalizedName.includes("onem")) return "Onem";
+    if (
+      normalizedName.includes("totalchargepatronale") ||
+      normalizedName.includes("chargepatronale")
+    )
+      return "Total Charge Patronale";
+    if (
+      normalizedName.includes("coutsalarial") ||
+      normalizedName.includes("coûtsalarial")
+    )
+      return "Coût Salarial";
+    if (normalizedName.includes("massesalariale")) return "Masse Salariale";
+    if (
+      normalizedName.includes("netàpayer") ||
+      normalizedName.includes("netapayer")
+    )
+      return "Net à Payer";
+    if (normalizedName.includes("fraisdeservices")) return "Frais de Services";
+    if (normalizedName.includes("tva16") || normalizedName.includes("tvafrais"))
+      return "TVA 16% Frais Services";
+    if (normalizedName.includes("totalemployeurmensuel"))
+      return "Total Employeur Mensuel";
+
+    return null;
+  };
+
+  // Parcourir les différences pour extraire les valeurs des colonnes pertinentes
+  comparisonResult.details.forEach((detail) => {
+    if (detail.differences) {
+      detail.differences.forEach((diff) => {
+        const category = detectColumn(diff.column);
+        if (category) {
+          if (typeof diff.valueA === "number")
+            totals.fileA[category] += diff.valueA;
+          if (typeof diff.valueB === "number")
+            totals.fileB[category] += diff.valueB;
+        }
+      });
+    }
+  });
+
+  // Arrondir les totaux à 2 décimales
+  for (const file in totals) {
+    for (const category in totals[file]) {
+      totals[file][category] = Math.round(totals[file][category] * 100) / 100;
+    }
+  }
+
+  return {
+    totals,
+    matriculeCount: matricules.size,
+    hasDuplicates,
+    errorCount: comparisonResult.summary.totalDifferences,
+  };
+}
 
 // Gestion des erreurs 404
 app.use((req, res) => {

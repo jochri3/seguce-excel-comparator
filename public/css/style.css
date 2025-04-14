@@ -1,231 +1,317 @@
 /* Styles généraux */
 body {
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  background-color: #f8f9fa;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f8f9fa;
 }
 
 /* Styles pour les cartes */
 .card {
-  border-radius: 10px;
-  overflow: hidden;
-  transition: all 0.3s ease;
-  margin-bottom: 20px;
+    border-radius: 10px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    margin-bottom: 20px;
 }
 
 .card:hover {
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
 }
 
 .card-header {
-  font-weight: 600;
+    font-weight: 600;
 }
 
 /* Styles pour les tableaux */
 .table {
-  font-size: 0.95rem;
+    font-size: 0.95rem;
 }
 
 .table-responsive {
-  border-radius: 5px;
-  overflow: hidden;
+    border-radius: 5px;
+    overflow: hidden;
 }
 
 /* Styles pour l'accordéon */
 .accordion-button:not(.collapsed) {
-  background-color: #e7f1ff;
-  color: #0d6efd;
+    background-color: #e7f1ff;
+    color: #0d6efd;
 }
 
 .accordion-button:focus {
-  box-shadow: none;
-  border-color: rgba(0, 0, 0, 0.125);
+    box-shadow: none;
+    border-color: rgba(0, 0, 0, 0.125);
 }
 
 /* Styles pour les boutons */
 .btn {
-  border-radius: 5px;
-  font-weight: 500;
+    border-radius: 5px;
+    font-weight: 500;
 }
 
 .btn-lg {
-  padding: 0.75rem 1.5rem;
+    padding: 0.75rem 1.5rem;
 }
 
 /* Styles pour les badges */
 .badge {
-  font-weight: 500;
-  padding: 0.5em 0.8em;
+    font-weight: 500;
+    padding: 0.5em 0.8em;
 }
 
 /* Styles pour les alertes */
 .alert {
-  border-radius: 10px;
-  font-weight: 500;
+    border-radius: 10px;
+    font-weight: 500;
+}
+
+/* Styles pour les tableaux de synthèse */
+.table-summary th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+}
+
+.table-summary td.text-end {
+    font-family: 'Courier New', monospace;
+    font-weight: 500;
+}
+
+.text-danger {
+    color: #dc3545 !important;
+}
+
+/* Styles spécifiques pour le tableau de récapitulatif */
+.table-bordered {
+    border: 1px solid #dee2e6;
+}
+
+.table-striped tbody tr:nth-of-type(odd) {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(0, 0, 0, 0.075);
 }
 
 /* Animation de chargement */
 .loading {
-  display: none;
-  text-align: center;
-  padding: 20px;
+    display: none;
+    text-align: center;
+    padding: 20px;
 }
 
 .loading .spinner-border {
-  width: 3rem;
-  height: 3rem;
+    width: 3rem;
+    height: 3rem;
 }
 
 /* Surcharge des couleurs Bootstrap */
 .bg-primary {
-  background-color: #0859c6 !important;
+    background-color: #0859c6 !important;
 }
 
 .btn-primary {
-  background-color: #0859c6;
-  border-color: #0859c6;
+    background-color: #0859c6;
+    border-color: #0859c6;
 }
 
 .btn-primary:hover {
-  background-color: #074aa9;
-  border-color: #074aa9;
+    background-color: #074aa9;
+    border-color: #074aa9;
 }
 
 .text-primary {
-  color: #0859c6 !important;
+    color: #0859c6 !important;
 }
 
-/* Styles spécifiques aux données APEI */
+/* Styles pour la ligne de total */
+.table .table-primary {
+    background-color: #cfe2ff;
+}
+
+/* Styles pour les différences numériques */
 .diff-row {
-  cursor: pointer;
-  transition: background-color 0.2s;
+    cursor: pointer;
+    transition: background-color 0.2s;
 }
 
 .diff-row:hover {
-  background-color: #f8f9fa;
+    background-color: #f8f9fa;
 }
 
-.diff-row.table-warning {
-  background-color: #fff3cd;
-  border-left: 3px solid #ffc107;
-}
-
-/* Style pour les colonnes avec des différences numériques */
-.numeric-difference {
-  font-family: "Courier New", monospace;
-  text-align: right;
-}
-
-/* Style pour les montants */
-.currency {
-  font-weight: 500;
-  text-align: right;
-}
-
-/* Surlignage des différences importantes */
-.major-difference {
-  background-color: #ffdddd !important;
-  font-weight: bold;
-}
-
-/* Format d'affichage pour les matricules */
-.matricule {
-  font-family: "Courier New", monospace;
-  font-weight: 500;
-  background-color: #eef;
-  padding: 2px 5px;
-  border-radius: 3px;
-}
-
-/* Filtres visuels */
-.filter-badge {
-  background-color: #0859c6;
-  color: white;
-  padding: 3px 8px;
-  border-radius: 10px;
-  font-size: 0.85rem;
-  margin-right: 5px;
-  display: none;
-}
-
-.filter-active .filter-badge {
-  display: inline-block;
+.diff-row.highlighted {
+    background-color: #fff3cd;
+    border-left: 3px solid #ffc107;
 }
 
 /* Styles pour l'impression */
 @media print {
-  .accordion-button::after {
-    display: none;
-  }
+    .accordion-button::after {
+        display: none;
+    }
+    
+    .accordion-collapse {
+        display: block !important;
+    }
+    
+    .accordion-button {
+        padding: 1rem;
+        display: block;
+        background-color: #f8f9fa !important;
+        color: #000 !important;
+        font-weight: bold;
+    }
+    
+    #expandAllBtn, #collapseAllBtn, #searchResults, #clearFilterBtn, #searchColumns, footer {
+        display: none !important;
+    }
+    
+    .container-fluid {
+        width: 100% !important;
+        max-width: none !important;
+        padding: 0 !important;
+    }
+    
+    .card {
+        border: 1px solid #ddd !important;
+        box-shadow: none !important;
+        margin-bottom: 20px !important;
+        break-inside: avoid;
+    }
+    
+    .table {
+        border-collapse: collapse !important;
+        width: 100% !important;
+        break-inside: auto;
+    }
+    
+    .table td, .table th {
+        border: 1px solid #ddd !important;
+        padding: 8px !important;
+    }
+    
+    tr {
+        break-inside: avoid;
+        break-after: auto;
+    }
+    
+    thead {
+        display: table-header-group;
+    }
+    
+    tfoot {
+        display: table-footer-group;
+    }
+    
+    a[href]:after {
+        content: none !important;
+    }
+    
+    .diff-row.highlighted {
+        background-color: #fff3cd !important;
+        -webkit-print-color-adjust: exact !important;
+        color-adjust: exact !important;
+    }
+    
+    .filter-btn, .input-group, #printBtn {
+        display: none !important;
+    }
+}
 
-  .accordion-collapse {
-    display: block !important;
-  }
-
-  .accordion-button {
-    padding: 1rem;
-    display: block;
-    background-color: #f8f9fa !important;
-    color: #000 !important;
+/* Styles pour les tableaux de totaux */
+.total-row td {
     font-weight: bold;
-  }
+    background-color: #e9ecef;
+}
 
-  #expandAllBtn,
-  #collapseAllBtn,
-  #printBtn,
-  #exportBtn,
-  #clearFilterBtn,
-  #searchResults,
-  footer,
-  .filter-btn,
-  #searchColumns {
-    display: none !important;
-  }
+.total-value {
+    font-family: 'Courier New', monospace;
+    text-align: right;
+    white-space: nowrap;
+}
 
-  .container-fluid {
-    width: 100% !important;
-    max-width: none !important;
-    padding: 0 !important;
-  }
+/* Styles pour les différentes sections */
+.section-title {
+    border-bottom: 2px solid #dee2e6;
+    padding-bottom: 8px;
+    margin-bottom: 20px;
+    font-weight: 600;
+    color: #0859c6;
+}
 
-  .card {
-    border: 1px solid #ddd !important;
-    box-shadow: none !important;
-    margin-bottom: 20px !important;
-    break-inside: avoid;
-  }
+/* Styles pour la barre d'actions */
+.actions-bar {
+    background-color: #f8f9fa;
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
 
-  .table {
-    border-collapse: collapse !important;
-    width: 100% !important;
-    break-inside: auto;
-  }
+.actions-bar .btn {
+    margin-right: 10px;
+}
 
-  .table td,
-  .table th {
-    border: 1px solid #ddd !important;
-    padding: 8px !important;
-  }
+/* Styles pour la section de synthèse */
+.synthesis-section {
+    background-color: #f8f9fa;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 30px;
+}
 
-  tr {
-    break-inside: avoid;
-    break-after: auto;
-  }
+.synthesis-card {
+    border: none;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+}
 
-  thead {
-    display: table-header-group;
-  }
+.synthesis-card .card-header {
+    background-color: #0859c6;
+    color: white;
+    border-radius: 10px 10px 0 0;
+}
 
-  tfoot {
-    display: table-footer-group;
-  }
+.synthesis-card .card-body {
+    padding: 20px;
+}
 
-  a[href]:after {
-    content: none !important;
-  }
+/* Mise en forme des nombres */
+.number-format {
+    font-family: 'Courier New', monospace;
+    text-align: right;
+}
 
-  .diff-row.table-warning {
-    background-color: #fff3cd !important;
-    -webkit-print-color-adjust: exact !important;
-    color-adjust: exact !important;
-  }
+.difference-positive {
+    color: #28a745;
+}
+
+.difference-negative {
+    color: #dc3545;
+}
+
+/* Styles pour l'exportation */
+.export-buttons {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.export-buttons .btn {
+    margin: 0 10px;
+    padding: 10px 20px;
+    font-weight: 500;
+    border-radius: 5px;
+    transition: all 0.3s ease;
+}
+
+.export-buttons .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.export-buttons .btn-success {
+    background-color: #28a745;
+    border-color: #28a745;
+}
+
+.export-buttons .btn-success:hover {
+    background-color: #218838;
+    border-color: #1e7e34;
 }

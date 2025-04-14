@@ -38,54 +38,26 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // Ajout d'une fonctionnalité d'export Excel si la page de comparaison est chargée
-  const exportBtn = document.getElementById("exportBtn");
-  if (exportBtn) {
-    exportBtn.addEventListener("click", function () {
-      // Tableau pour stocker les données à exporter
-      const exportData = [];
+  // Fonctionnalité d'export Excel
+  const exportExcelBtn = document.getElementById("exportExcelBtn");
+  if (exportExcelBtn) {
+    exportExcelBtn.addEventListener("click", function () {
+      // Afficher un indicateur de chargement
+      const originalText = this.innerHTML;
+      this.innerHTML =
+        '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Génération du fichier...';
+      this.disabled = true;
 
-      // Ajouter l'en-tête
-      exportData.push([
-        "Matricule",
-        "Colonne",
-        "Valeur Fichier A",
-        "Valeur Fichier B",
-        "Différence",
-      ]);
+      // Rediriger vers l'URL d'export
+      setTimeout(() => {
+        window.location.href = "/export-excel";
 
-      // Parcourir toutes les différences
-      document.querySelectorAll(".accordion-item").forEach((item) => {
-        const matricule = item.getAttribute("data-matricule");
-        const diffRows = item.querySelectorAll(".diff-row");
-
-        diffRows.forEach((row) => {
-          const cells = row.querySelectorAll("td");
-          if (cells.length >= 4) {
-            exportData.push([
-              matricule,
-              cells[0].textContent.trim(),
-              cells[1].textContent.trim(),
-              cells[2].textContent.trim(),
-              cells[3].textContent.trim(),
-            ]);
-          }
-        });
-      });
-
-      // Créer une chaîne CSV
-      const csvContent = exportData.map((row) => row.join(",")).join("\n");
-
-      // Créer un lien de téléchargement
-      const encodedUri = encodeURI("data:text/csv;charset=utf-8," + csvContent);
-      const link = document.createElement("a");
-      link.setAttribute("href", encodedUri);
-      link.setAttribute("download", "differences_apei.csv");
-      document.body.appendChild(link);
-
-      // Cliquer sur le lien et le supprimer
-      link.click();
-      document.body.removeChild(link);
+        // Réinitialiser le bouton après un délai
+        setTimeout(() => {
+          this.innerHTML = originalText;
+          this.disabled = false;
+        }, 2000);
+      }, 500);
     });
   }
 
@@ -131,9 +103,9 @@ document.addEventListener("DOMContentLoaded", function () {
         item.querySelectorAll(".diff-row").forEach((row) => {
           const rowColumn = row.getAttribute("data-column");
           if (rowColumn === columnName) {
-            row.classList.add("table-warning");
+            row.classList.add("highlighted");
           } else {
-            row.classList.remove("table-warning");
+            row.classList.remove("highlighted");
           }
         });
       } else {
@@ -151,7 +123,7 @@ document.addEventListener("DOMContentLoaded", function () {
         item.style.display = "";
         // Supprimer le surlignage
         item.querySelectorAll(".diff-row").forEach((row) => {
-          row.classList.remove("table-warning");
+          row.classList.remove("highlighted");
         });
       });
     });
@@ -162,11 +134,67 @@ document.addEventListener("DOMContentLoaded", function () {
     row.addEventListener("click", function () {
       // Supprimer la classe de toutes les lignes
       document.querySelectorAll(".diff-row").forEach((r) => {
-        r.classList.remove("table-warning");
+        r.classList.remove("highlighted");
       });
 
       // Ajouter la classe à la ligne cliquée
-      this.classList.add("table-warning");
+      this.classList.add("highlighted");
     });
   });
+
+  // Recherche dans les colonnes
+  const searchColumnsInput = document.getElementById("searchColumns");
+  if (searchColumnsInput) {
+    searchColumnsInput.addEventListener("input", function () {
+      const searchTerm = this.value.toLowerCase();
+      const tableRows = document.querySelectorAll("#columnsTable tbody tr");
+
+      tableRows.forEach((row) => {
+        const columnName = row
+          .querySelector("td:first-child")
+          .textContent.toLowerCase();
+        row.style.display = columnName.includes(searchTerm) ? "" : "none";
+      });
+    });
+  }
+
+  // Fonctionnalité d'impression avancée
+  const printBtn = document.getElementById("printBtn");
+  if (printBtn) {
+    printBtn.addEventListener("click", function () {
+      // Préparer la page pour l'impression
+      document.querySelectorAll(".accordion-collapse").forEach((collapse) => {
+        // Développer tous les accordéons pour l'impression
+        if (!collapse.classList.contains("show")) {
+          // Trouver et cliquer sur le bouton correspondant
+          const button = document.querySelector(
+            `[data-bs-target="#${collapse.id}"]`
+          );
+          if (button) {
+            button.classList.remove("collapsed");
+            collapse.classList.add("show");
+          }
+        }
+      });
+
+      // Lancer l'impression
+      window.print();
+
+      // Restaurer l'état des accordéons après l'impression
+      setTimeout(() => {
+        document
+          .querySelectorAll(".accordion-collapse.show")
+          .forEach((collapse) => {
+            // Trouver et cliquer sur le bouton correspondant
+            const button = document.querySelector(
+              `[data-bs-target="#${collapse.id}"]`
+            );
+            if (button && !button.hasAttribute("data-was-expanded")) {
+              button.classList.add("collapsed");
+              collapse.classList.remove("show");
+            }
+          });
+      }, 1000);
+    });
+  }
 });

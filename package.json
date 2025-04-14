@@ -1,12 +1,13 @@
 {
-  "name": "apei-reconciliation",
+  "name": "wages-reconciliation",
   "version": "1.0.0",
-  "description": "Application de réconciliation des fichiers APEI",
+  "description": "Application de réconciliation des fichiers",
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
     "dev": "nodemon app.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "lint": "npx ejs-lint views/*.ejs"
+    
   },
   "keywords": [
     "excel",
@@ -25,6 +26,7 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "ejs-lint": "^2.0.1",
     "nodemon": "^3.0.1"
   }
 }
