@@ -197,20 +197,30 @@ function calculateSummaryData(comparisonResult) {
     },
   };
 
-  // Vérifier les doublons de matricules
-  const matricules = new Set();
-  comparisonResult.details.forEach((detail) => {
-    if (detail.id) {
-      matricules.add(detail.id);
-    }
-  });
+  // Récupérer les informations sur les matricules directement du résultat
+  let matriculeCount = comparisonResult.matriculeCount || 0;
+  let hasDuplicates = comparisonResult.hasDuplicates || false;
 
-  const hasDuplicates =
-    matricules.size < comparisonResult.summary.totalRows.fileA ||
-    matricules.size < comparisonResult.summary.totalRows.fileB;
+  // Si ces informations ne sont pas directement disponibles, les calculer
+  if (matriculeCount === 0 && comparisonResult.details.length > 0) {
+    // Vérifier les doublons de matricules
+    const matricules = new Set();
+    comparisonResult.details.forEach((detail) => {
+      if (detail.id) {
+        matricules.add(detail.id);
+      }
+    });
+
+    matriculeCount = matricules.size;
+    hasDuplicates =
+      matriculeCount < comparisonResult.summary.totalRows.fileA ||
+      matriculeCount < comparisonResult.summary.totalRows.fileB;
+  }
 
   // Détecter les colonnes qui correspondent aux totaux que nous recherchons
   const detectColumn = (columnName) => {
+    if (!columnName) return null;
+
     const normalizedName = columnName.toLowerCase().replace(/\s+/g, "");
 
     if (normalizedName.includes("cnssqpo") || normalizedName.includes("qpo"))
@@ -236,7 +246,11 @@ function calculateSummaryData(comparisonResult) {
       normalizedName.includes("netapayer")
     )
       return "Net à Payer";
-    if (normalizedName.includes("fraisdeservices")) return "Frais de Services";
+    if (
+      normalizedName.includes("fraisdeservices") ||
+      normalizedName.includes("fraisservices")
+    )
+      return "Frais de Services";
     if (normalizedName.includes("tva16") || normalizedName.includes("tvafrais"))
       return "TVA 16% Frais Services";
     if (normalizedName.includes("totalemployeurmensuel"))
@@ -269,7 +283,7 @@ function calculateSummaryData(comparisonResult) {
 
   return {
     totals,
-    matriculeCount: matricules.size,
+    matriculeCount,
     hasDuplicates,
     errorCount: comparisonResult.summary.totalDifferences,
   };

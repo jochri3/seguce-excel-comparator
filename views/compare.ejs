@@ -27,30 +27,30 @@
                             <div class="col-md-6">
                                 <h4 class="text-primary mb-3">Informations générales</h4>
                                 <table class="table table-bordered table-striped">
-                                    <tbody>
-                                        <tr>
-                                            <th>Nombre de lignes (Fichier A)</th>
-                                            <td><%= comparisonResult.summary.totalRows.fileA %></td>
-                                        </tr>
-                                        <tr>
-                                            <th>Nombre de lignes (Fichier B)</th>
-                                            <td><%= comparisonResult.summary.totalRows.fileB %></td>
-                                        </tr>
-                                        <tr>
-                                            <th>Nombre de matricules contrôlés</th>
-                                            <td><%= summary.matriculeCount %></td>
-                                        </tr>
-                                        <tr>
-                                            <th>Présence de doublons</th>
-                                            <td><%= summary.hasDuplicates ? 'OUI' : 'NON' %></td>
-                                        </tr>
-                                        <tr>
-                                            <th>Nombre de différences</th>
-                                            <td class="<%= summary.errorCount > 0 ? 'text-danger fw-bold' : '' %>">
-                                                <%= summary.errorCount %>
-                                            </td>
-                                        </tr>
-                                    </tbody>
+                                <tbody>
+    <tr>
+        <th>Nombre de lignes (Fichier A)</th>
+        <td><%= comparisonResult.summary.totalRows.fileA %></td>
+    </tr>
+    <tr>
+        <th>Nombre de lignes (Fichier B)</th>
+        <td><%= comparisonResult.summary.totalRows.fileB %></td>
+    </tr>
+    <tr>
+        <th>Nombre de matricules contrôlés</th>
+        <td><%= summary.matriculeCount || 0 %></td>
+    </tr>
+    <tr>
+        <th>Présence de doublons</th>
+        <td><%= summary.hasDuplicates ? 'OUI' : 'NON' %></td>
+    </tr>
+    <tr>
+        <th>Nombre de différences</th>
+        <td class="<%= summary.errorCount > 0 ? 'text-danger fw-bold' : '' %>">
+            <%= summary.errorCount %>
+        </td>
+    </tr>
+</tbody>
                                 </table>
                             </div>
                             <div class="col-md-6">

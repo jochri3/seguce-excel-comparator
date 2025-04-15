@@ -7,6 +7,8 @@ const XLSX = require("xlsx");
  */
 const parseExcelFile = (filePath) => {
   try {
+    console.log(`Lecture du fichier: ${filePath}`);
+
     const workbook = XLSX.readFile(filePath, {
       cellDates: true,
       cellNF: true,
@@ -27,64 +29,103 @@ const parseExcelFile = (filePath) => {
       header: 1,
     });
 
+    // Si les données sont vides, retourner un résultat vide
+    if (jsonData.length === 0) {
+      return {
+        sheetName: sheetNames[0],
+        headers: [],
+        data: [],
+        rawWorksheet: worksheet,
+      };
+    }
+
     const detectHeaderRow = (
       jsonData,
-      keyword = "Matricule Fictif",
+      possibleKeywords = ["Matricule", "matricule", "ID", "Id", "id", "Code"],
       maxRows = 10
     ) => {
       for (let i = 0; i < Math.min(maxRows, jsonData.length); i++) {
         const row = jsonData[i];
-        if (
-          row &&
-          row.some((cell) => typeof cell === "string" && cell.includes(keyword))
-        ) {
-          return i;
+        if (!row) continue;
+
+        for (let j = 0; j < row.length; j++) {
+          const cell = row[j];
+          if (!cell) continue;
+
+          if (typeof cell === "string") {
+            for (const keyword of possibleKeywords) {
+              if (cell.includes(keyword)) {
+                return i;
+              }
+            }
+          }
         }
       }
-      return -1;
+      // Si aucun mot-clé n'est trouvé, utiliser la première ligne comme en-tête
+      return 0;
     };
 
     const cleanHeaders = (headers) => {
       return headers.map((header, index) => {
         if (!header || header.toString().trim() === "") {
-          return `Col_${index}`;
+          // Ne pas générer de noms Col_XX, utiliser un espace
+          return ` ${index}`;
         }
         return header.toString().trim();
       });
     };
 
     const extractDataWithCleanHeaders = (jsonData, headerRowIndex) => {
+      if (headerRowIndex >= jsonData.length) {
+        headerRowIndex = 0; // Fallback à la première ligne
+      }
+
       const headersRaw = jsonData[headerRowIndex] || [];
       const headers = cleanHeaders(headersRaw);
 
       const data = [];
       for (let i = headerRowIndex + 1; i < jsonData.length; i++) {
         const row = jsonData[i];
-        if (!row || row.length === 0) continue;
+        if (
+          !row ||
+          row.length === 0 ||
+          row.every((cell) => cell === null || cell === undefined)
+        )
+          continue;
 
         const rowData = {};
         for (let j = 0; j < headers.length; j++) {
-          rowData[headers[j]] = row[j];
+          // Ne pas inclure les colonnes avec des en-têtes uniquement numériques ou espaces
+          if (headers[j] && !headers[j].match(/^\s*\d+\s*$/)) {
+            rowData[headers[j]] = j < row.length ? row[j] : null;
+          }
         }
-        data.push(rowData);
+
+        // Ne pas inclure les lignes vides
+        if (Object.keys(rowData).length > 0) {
+          data.push(rowData);
+        }
       }
 
       return {
-        headers: headers.map((key) => ({ key, value: key })),
+        headers: headers
+          .filter((h) => !h.match(/^\s*\d+\s*$/)) // Exclure les en-têtes numériques ou espaces
+          .map((key) => ({ key, value: key })),
         data,
       };
     };
 
+    // Détecter la ligne d'en-tête
     const headerRowIndex = detectHeaderRow(jsonData);
-    if (headerRowIndex === -1) {
-      throw new Error(
-        "Impossible de détecter une ligne d'en-tête contenant 'Matricule Fictif'"
-      );
-    }
 
+    // Extraire les données
     const { headers, data } = extractDataWithCleanHeaders(
       jsonData,
       headerRowIndex
+    );
+
+    console.log(
+      `Données extraites: ${data.length} lignes avec ${headers.length} colonnes`
     );
 
     return {
@@ -126,179 +167,208 @@ const compareExcelData = (fileAData, fileBData) => {
     `Comparaison: Fichier A a ${fileAData.data.length} lignes, Fichier B a ${fileBData.data.length} lignes`
   );
 
-  // Vérifier si les données sont valides
+  // Si un des fichiers est vide, sortir
   if (fileAData.data.length === 0 || fileBData.data.length === 0) {
-    throw new Error(
-      "Un ou les deux fichiers ne contiennent pas de données exploitables"
-    );
+    console.log("Un des fichiers est vide, comparaison impossible");
+    return results;
   }
 
-  // Identifier la colonne d'identifiant unique (Matricule Fictif ou première colonne)
-  let idColumn = "Matricule Fictif";
+  // Identifier la colonne d'identifiant unique
+  let idColumnA = null;
+  let idColumnB = null;
 
-  // Vérifier si la colonne existe dans les deux fichiers
-  if (
-    !fileAData.data[0].hasOwnProperty(idColumn) ||
-    !fileBData.data[0].hasOwnProperty(idColumn)
-  ) {
-    console.log(
-      `La colonne '${idColumn}' n'est pas présente dans les deux fichiers. Recherche d'alternatives...`
-    );
+  // Fonction pour normaliser le nom d'une colonne
+  const normalizeColumnName = (name) =>
+    String(name).toLowerCase().replace(/\s+/g, "");
 
-    // Chercher des alternatives ('Matricule', 'ID', etc.)
-    const alternatives = ["Matricule", "ID", "Id", "id"];
-    for (const alt of alternatives) {
-      if (
-        fileAData.data[0].hasOwnProperty(alt) &&
-        fileBData.data[0].hasOwnProperty(alt)
-      ) {
-        idColumn = alt;
-        console.log(`Utilisation de '${idColumn}' comme colonne d'identifiant`);
+  // Trouver les colonnes d'ID potentielles
+  const possibleIdColumns = [
+    "matriculefictif",
+    "matricule",
+    "id",
+    "code",
+    "reference",
+    "employeid",
+  ];
+
+  // Chercher dans les en-têtes du fichier A
+  for (const header of fileAData.headers) {
+    const normalizedName = normalizeColumnName(header.key);
+    for (const idCol of possibleIdColumns) {
+      if (normalizedName.includes(idCol)) {
+        idColumnA = header.key;
+        console.log(`Colonne d'ID trouvée dans A: "${idColumnA}"`);
         break;
       }
     }
-
-    // Si aucune alternative n'est trouvée, utiliser la première colonne
-    if (
-      !fileAData.data[0].hasOwnProperty(idColumn) ||
-      !fileBData.data[0].hasOwnProperty(idColumn)
-    ) {
-      // Prendre la première clé de chaque objet
-      const firstKeyA = Object.keys(fileAData.data[0])[0];
-      const firstKeyB = Object.keys(fileBData.data[0])[0];
-
-      if (firstKeyA === firstKeyB) {
-        idColumn = firstKeyA;
-        console.log(
-          `Utilisation de la première colonne '${idColumn}' comme identifiant`
-        );
-      } else {
-        throw new Error(
-          "Impossible de trouver une colonne d'identifiant commune entre les fichiers"
-        );
-      }
-    }
+    if (idColumnA) break;
   }
 
-  // Liste des colonnes à comparer (toutes les colonnes communes sauf l'identifiant)
-  // Dans la fonction compareExcelData, remplacer le code qui trouve les colonnes communes par ceci:
+  // Chercher dans les en-têtes du fichier B
+  for (const header of fileBData.headers) {
+    const normalizedName = normalizeColumnName(header.key);
+    for (const idCol of possibleIdColumns) {
+      if (normalizedName.includes(idCol)) {
+        idColumnB = header.key;
+        console.log(`Colonne d'ID trouvée dans B: "${idColumnB}"`);
+        break;
+      }
+    }
+    if (idColumnB) break;
+  }
 
-  // Liste des colonnes à comparer
-  const headerKeysA = fileAData.headers.map((h) => h.key);
-  const headerKeysB = fileBData.headers.map((h) => h.key);
+  // Si aucune colonne d'ID n'est trouvée, utiliser la première colonne
+  if (!idColumnA && fileAData.headers.length > 0) {
+    idColumnA = fileAData.headers[0].key;
+    console.log(
+      `Aucune colonne d'ID trouvée dans A, utilisation de la première colonne: "${idColumnA}"`
+    );
+  }
 
-  // Créer une correspondance entre les noms de colonnes (insensible à la casse et aux espaces)
-  const normalizeColumnName = (name) =>
-    String(name).trim().toLowerCase().replace(/\s+/g, "");
+  if (!idColumnB && fileBData.headers.length > 0) {
+    idColumnB = fileBData.headers[0].key;
+    console.log(
+      `Aucune colonne d'ID trouvée dans B, utilisation de la première colonne: "${idColumnB}"`
+    );
+  }
+
+  if (!idColumnA || !idColumnB) {
+    throw new Error(
+      "Impossible de trouver une colonne d'identifiant dans l'un des fichiers"
+    );
+  }
 
   // Construire un dictionnaire de correspondance entre les colonnes des deux fichiers
   const columnMapping = {};
-  headerKeysA.forEach((keyA) => {
-    const normalizedA = normalizeColumnName(keyA);
-    headerKeysB.forEach((keyB) => {
-      const normalizedB = normalizeColumnName(keyB);
-      if (
-        normalizedA === normalizedB &&
-        keyA !== idColumn &&
-        keyB !== idColumn
-      ) {
-        // Associer la colonne du fichier A à celle du fichier B
-        columnMapping[keyA] = keyB;
+  fileAData.headers.forEach((headerA) => {
+    const normalizedA = normalizeColumnName(headerA.key);
+    fileBData.headers.forEach((headerB) => {
+      const normalizedB = normalizeColumnName(headerB.key);
+      if (normalizedA === normalizedB) {
+        columnMapping[headerA.key] = headerB.key;
       }
     });
   });
 
   // Obtenir les colonnes communes pour la comparaison
-  const commonColumns = Object.keys(columnMapping);
+  const commonColumns = Object.keys(columnMapping).filter(
+    (col) => col !== idColumnA
+  );
 
   console.log(
     `${commonColumns.length} colonnes communes trouvées pour la comparaison`
   );
+
   if (commonColumns.length === 0) {
-    throw new Error(
-      "Les fichiers n'ont aucune colonne commune pour la comparaison"
+    console.log(
+      "Aucune colonne commune trouvée. Vérifiez les en-têtes des fichiers."
     );
+    return results;
   }
 
-  // Colonnes numériques - utile pour le formatage et les comparaisons
-  const numericColumns = [
-    "Jr. Prestés",
-    "JAbsence",
-    "Jrs. Maladie",
-    "Congé Circ.",
-    "Congé Maternité",
-    "Jrs. Ferié",
-    "Jrs. Congé Payés",
-    "Nbre Heure Supp. 1",
-    "Nbre Heure Supp. 2",
-    "Nbre Heure Supp. 3",
-    "Nbre Heure Supp. 4",
-    "Salaire",
-    "Ancienneté",
-    "Sur Salaire",
-    "Maladie",
-    "Congé Circ.",
-    "Ferié",
-    "Congé Maternité",
-    "Congé Payer",
-    "Heure Supplémentaire",
-    "Recuperation",
-    "Prime Imposable Fixe",
-    "Prime Imposable Variable",
-    "Indemn. Logement",
-    "Indemn. Transport",
-    "Base Imposable",
-    "Plafond Cnss",
-    "Cnss QPO",
-    "IPR",
-    "Masse Salariale",
-    "Net à Payer",
-    "Cnss QPP",
-    "Inpp",
-    "Onem",
-    "Total Charge Patronale",
-    "Coût Salarial",
-    "Frais de Services",
-    "TVA 16% Frais Services",
-    "Frais Admin.",
-    "Total Employeur Mensuel",
-  ];
+  // Déterminer les colonnes numériques
+  const numericColumns = [];
+
+  // Analyser les données pour détecter les colonnes qui semblent contenir des nombres
+  const detectNumericColumns = () => {
+    commonColumns.forEach((colA) => {
+      const colB = columnMapping[colA];
+
+      // Vérifier si les valeurs dans cette colonne sont majoritairement numériques
+      let numericCount = 0;
+      const sampleSize = Math.min(fileAData.data.length, 10); // Vérifier les 10 premières lignes
+
+      for (let i = 0; i < sampleSize; i++) {
+        if (i >= fileAData.data.length) break;
+
+        const valueA = fileAData.data[i][colA];
+        if (valueA !== null && valueA !== undefined) {
+          const parsedValue = parseValue(valueA);
+          if (typeof parsedValue === "number") {
+            numericCount++;
+          }
+        }
+      }
+
+      // Si plus de la moitié des valeurs sont numériques, considérer la colonne comme numérique
+      if (numericCount > sampleSize / 2) {
+        numericColumns.push(colA);
+      }
+    });
+  };
+
+  detectNumericColumns();
+  console.log(`Colonnes numériques détectées: ${numericColumns.join(", ")}`);
 
   // Créer un dictionnaire pour le fichier B pour faciliter la recherche
   const fileBDict = {};
   fileBData.data.forEach((row) => {
-    const idValue = row[idColumn];
-    if (idValue) {
+    if (row[idColumnB] !== undefined && row[idColumnB] !== null) {
+      const idValue = String(row[idColumnB]).trim();
       fileBDict[idValue] = row;
     }
   });
 
+  // Ensemble pour vérifier les doublons de matricules
+  const matriculesA = new Set();
+  const matriculesB = new Set();
+
+  // Compter les matricules uniques
+  fileAData.data.forEach((row) => {
+    if (row[idColumnA] !== undefined && row[idColumnA] !== null) {
+      matriculesA.add(String(row[idColumnA]).trim());
+    }
+  });
+
+  fileBData.data.forEach((row) => {
+    if (row[idColumnB] !== undefined && row[idColumnB] !== null) {
+      matriculesB.add(String(row[idColumnB]).trim());
+    }
+  });
+
+  // Mettre à jour le nombre total de matricules contrôlés
+  results.matriculeCount = matriculesA.size;
+
+  // Vérifier les doublons
+  results.hasDuplicates =
+    matriculesA.size < fileAData.data.length ||
+    matriculesB.size < fileBData.data.length;
+
   // Comparer chaque ligne du fichier A avec son équivalent dans le fichier B
   fileAData.data.forEach((rowA) => {
-    const idValue = rowA[idColumn];
+    if (rowA[idColumnA] === undefined || rowA[idColumnA] === null) return;
+
+    const idValue = String(rowA[idColumnA]).trim();
 
     // Si la ligne existe dans les deux fichiers
-    if (idValue && fileBDict[idValue]) {
+    if (fileBDict[idValue]) {
       const rowB = fileBDict[idValue];
       const rowDifferences = [];
 
       // Comparer chaque cellule pour les colonnes communes
       commonColumns.forEach((colA) => {
-        const colB = columnMapping[colA]; // Obtenir la colonne correspondante dans B
+        const colB = columnMapping[colA];
         const valueA = parseValue(rowA[colA]);
         const valueB = parseValue(rowB[colB]);
 
-        // Comparer les valeurs (avec gestion des types)
+        // Ne pas considérer comme différence si les deux valeurs sont null/undefined
+        if (
+          (valueA === null && valueB === null) ||
+          (valueA === undefined && valueB === undefined)
+        ) {
+          return;
+        }
+
+        // Comparer les valeurs
         if (!areValuesEqual(valueA, valueB)) {
           rowDifferences.push({
-            column: colA, // Utiliser le nom de la colonne A pour l'affichage
+            column: colA,
             columnNameA: colA,
             columnNameB: colB,
             valueA,
             valueB,
             difference: calculateDifference(valueA, valueB),
-            isNumeric:
-              numericColumns.includes(colA) || numericColumns.includes(colB),
+            isNumeric: numericColumns.includes(colA),
           });
         }
       });
@@ -332,8 +402,6 @@ const compareExcelData = (fileAData, fileBData) => {
           differences: rowDifferences,
           rowData: {
             matricule: idValue,
-            nom: rowA["Nom"] || "N/A", // Ajoutez si ces colonnes existent
-            prenom: rowA["Prénom"] || "N/A",
           },
         });
       }
@@ -343,22 +411,28 @@ const compareExcelData = (fileAData, fileBData) => {
       results.details.push({
         id: idValue,
         onlyInFileA: true,
-        rowData: rowA,
+        rowData: { matricule: idValue, ...rowA },
       });
     }
   });
 
   // Trouver les lignes qui sont dans B mais pas dans A
   fileBData.data.forEach((rowB) => {
-    const idValue = rowB[idColumn];
-    const rowAExists = fileAData.data.some((row) => row[idColumn] === idValue);
+    if (rowB[idColumnB] === undefined || rowB[idColumnB] === null) return;
 
-    if (idValue && !rowAExists) {
+    const idValue = String(rowB[idColumnB]).trim();
+    const rowAExists = fileAData.data.some(
+      (row) =>
+        row[idColumnA] !== undefined &&
+        String(row[idColumnA]).trim() === idValue
+    );
+
+    if (!rowAExists) {
       results.summary.totalDifferences++;
       results.details.push({
         id: idValue,
         onlyInFileB: true,
-        rowData: rowB,
+        rowData: { matricule: idValue, ...rowB },
       });
     }
   });
@@ -366,6 +440,11 @@ const compareExcelData = (fileAData, fileBData) => {
   console.log(
     `Analyse terminée: ${results.summary.totalDifferences} différences trouvées`
   );
+
+  // Ajouter les informations de matricules au résultat
+  results.matriculeCount = matriculesA.size;
+  results.hasDuplicates = results.hasDuplicates;
+
   return results;
 };
 
@@ -375,7 +454,7 @@ const compareExcelData = (fileAData, fileBData) => {
  * @returns {any} - Valeur parsée
  */
 const parseValue = (value) => {
-  if (value === null || value === undefined) {
+  if (value === null || value === undefined || value === "") {
     return null;
   }
 
@@ -386,35 +465,42 @@ const parseValue = (value) => {
 
   // Si c'est une chaîne qui représente un nombre
   if (typeof value === "string") {
-    // Enlever les virgules pour les nombres formatés (ex: "1,000.00")
-    // Gérer également le format européen (ex: "1.000,00")
-    let cleanValue = value;
+    // Ignorer les chaînes vides après nettoyage
+    const trimmed = value.trim();
+    if (trimmed === "") return null;
 
-    // Format européen: convertir "1.234,56" en "1234.56"
-    if (
-      cleanValue.includes(",") &&
-      cleanValue.includes(".") &&
-      cleanValue.lastIndexOf(",") > cleanValue.lastIndexOf(".")
-    ) {
-      cleanValue = cleanValue.replace(/\./g, "").replace(",", ".");
-    }
-    // Format américain: convertir "1,234.56" en "1234.56"
-    else if (
-      cleanValue.includes(",") &&
-      cleanValue.includes(".") &&
-      cleanValue.lastIndexOf(".") > cleanValue.lastIndexOf(",")
-    ) {
-      cleanValue = cleanValue.replace(/,/g, "");
-    }
-    // S'il n'y a qu'une virgule, présumer que c'est un séparateur décimal européen
-    else if (cleanValue.includes(",") && !cleanValue.includes(".")) {
-      cleanValue = cleanValue.replace(",", ".");
-    }
+    try {
+      // Enlever les espaces et caractères non imprimables
+      let cleanValue = trimmed.replace(/\s/g, "");
 
-    const numValue = parseFloat(cleanValue);
+      // Format européen: convertir "1.234,56" en "1234.56"
+      if (
+        cleanValue.includes(",") &&
+        cleanValue.includes(".") &&
+        cleanValue.lastIndexOf(",") > cleanValue.lastIndexOf(".")
+      ) {
+        cleanValue = cleanValue.replace(/\./g, "").replace(",", ".");
+      }
+      // Format américain: convertir "1,234.56" en "1234.56"
+      else if (
+        cleanValue.includes(",") &&
+        cleanValue.includes(".") &&
+        cleanValue.lastIndexOf(".") > cleanValue.lastIndexOf(",")
+      ) {
+        cleanValue = cleanValue.replace(/,/g, "");
+      }
+      // S'il n'y a qu'une virgule, présumer que c'est un séparateur décimal européen
+      else if (cleanValue.includes(",") && !cleanValue.includes(".")) {
+        cleanValue = cleanValue.replace(",", ".");
+      }
 
-    if (!isNaN(numValue)) {
-      return numValue;
+      const numValue = parseFloat(cleanValue);
+      if (!isNaN(numValue)) {
+        return numValue;
+      }
+    } catch (e) {
+      // En cas d'erreur, retourner la valeur d'origine
+      return value;
     }
   }
 
@@ -449,8 +535,28 @@ const areValuesEqual = (valueA, valueB) => {
 
   // Gestion des nombres
   if (typeof valueA === "number" && typeof valueB === "number") {
-    // Utiliser une petite tolérance pour les comparaisons de nombres flottants
-    return Math.abs(valueA - valueB) < 0.001;
+    // Utiliser une tolérance plus large pour les comparaisons de nombres flottants
+    // pour éviter les fausses différences dues aux erreurs d'arrondi
+    return Math.abs(valueA - valueB) < 0.01;
+  }
+
+  // Conversion en chaîne pour la comparaison générale
+  if (typeof valueA === "string" && typeof valueB === "string") {
+    return valueA.trim() === valueB.trim();
+  }
+
+  // Si les types sont différents mais qu'un est string et l'autre number,
+  // essayer de les comparer comme des nombres
+  if (
+    (typeof valueA === "string" && typeof valueB === "number") ||
+    (typeof valueA === "number" && typeof valueB === "string")
+  ) {
+    const numA = typeof valueA === "string" ? parseFloat(valueA) : valueA;
+    const numB = typeof valueB === "string" ? parseFloat(valueB) : valueB;
+
+    if (!isNaN(numA) && !isNaN(numB)) {
+      return Math.abs(numA - numB) < 0.01;
+    }
   }
 
   // Conversion en chaîne pour la comparaison générale
@@ -466,14 +572,32 @@ const areValuesEqual = (valueA, valueB) => {
 const calculateDifference = (valueA, valueB) => {
   // Si les valeurs sont numériques
   if (typeof valueA === "number" && typeof valueB === "number") {
-    return valueA - valueB;
+    return valueB - valueA;
+  }
+
+  // Si une valeur est un nombre et l'autre une chaîne représentant un nombre
+  if (
+    (typeof valueA === "string" && typeof valueB === "number") ||
+    (typeof valueA === "number" && typeof valueB === "string")
+  ) {
+    const numA = typeof valueA === "string" ? parseFloat(valueA) : valueA;
+    const numB = typeof valueB === "string" ? parseFloat(valueB) : valueB;
+
+    if (!isNaN(numA) && !isNaN(numB)) {
+      return numB - numA;
+    }
   }
 
   // Si les valeurs sont des dates
   if (valueA instanceof Date && valueB instanceof Date) {
     const diffInDays =
-      (valueA.getTime() - valueB.getTime()) / (1000 * 3600 * 24);
-    return `${Math.abs(diffInDays)} jour(s)`;
+      (valueB.getTime() - valueA.getTime()) / (1000 * 3600 * 24);
+    return diffInDays > 0 ? `+${diffInDays} jour(s)` : `${diffInDays} jour(s)`;
+  }
+
+  // Pour les autres types de valeurs, si elles sont égales
+  if (String(valueA).trim() === String(valueB).trim()) {
+    return "Identique";
   }
 
   // Pour les autres types de valeurs
