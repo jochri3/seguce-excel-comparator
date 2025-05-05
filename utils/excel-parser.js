@@ -104,6 +104,52 @@ const parseExcelFile = (filePath) => {
 };
 
 /**
+ * Classifier les colonnes en fixes et variables
+ */
+const classifyColumns = (columns) => {
+  // Liste des éléments fixes selon la spécification
+  const fixedElements = [
+    "matricule",
+    "bu",
+    "pers à charge",
+    "enfant légal",
+    "salaire mensuel",
+    "ancienneté mensuel",
+    "sur salaire mensuel",
+    "taux horaire",
+    "transport mensuel",
+    "logement mensuel",
+    "prime astreinte",
+    "forfait heures supplémentaire",
+    "prime de détachement",
+    "prime imposable fixe",
+  ];
+
+  // Normaliser les noms pour la comparaison
+  const normalizeForComparison = (name) => {
+    return name.toLowerCase().replace(/[^a-z0-9]/g, "");
+  };
+
+  const fixedColumns = [];
+  const variableColumns = [];
+
+  columns.forEach((column) => {
+    const normalizedColumn = normalizeForComparison(column);
+    const isFixed = fixedElements.some((fixedElement) =>
+      normalizedColumn.includes(normalizeForComparison(fixedElement)),
+    );
+
+    if (isFixed) {
+      fixedColumns.push(column);
+    } else {
+      variableColumns.push(column);
+    }
+  });
+
+  return { fixedColumns, variableColumns };
+};
+
+/**
  * Comparer les données de deux fichiers Excel
  * @param {Object} fileAData - Données du premier fichier Excel
  * @param {Object} fileBData - Données du deuxième fichier Excel
@@ -118,6 +164,15 @@ const compareExcelData = (fileAData, fileBData) => {
       },
       totalDifferences: 0,
       columnDifferences: [],
+      columnStats: {
+        commonColumns: [],
+        missingInA: [],
+        missingInB: [],
+      },
+      duplicates: {
+        fileA: [],
+        fileB: [],
+      },
     },
     details: [],
     headers: {
@@ -127,7 +182,7 @@ const compareExcelData = (fileAData, fileBData) => {
   };
 
   console.log(
-    `Comparaison: Fichier A a ${fileAData.data.length} lignes, Fichier B a ${fileBData.data.length} lignes`
+    `Comparaison: Fichier A a ${fileAData.data.length} lignes, Fichier B a ${fileBData.data.length} lignes`,
   );
 
   // Si un des fichiers est vide, sortir
@@ -136,13 +191,13 @@ const compareExcelData = (fileAData, fileBData) => {
     return results;
   }
 
-  // Identifier la colonne d'identifiant unique
-  let idColumnA = null;
-  let idColumnB = null;
-
   // Fonction pour normaliser le nom d'une colonne
   const normalizeColumnName = (name) =>
     String(name).toLowerCase().replace(/\s+/g, "");
+
+  // Identifier la colonne d'identifiant unique
+  let idColumnA = null;
+  let idColumnB = null;
 
   // Trouver les colonnes d'ID potentielles
   const possibleIdColumns = [
@@ -184,27 +239,32 @@ const compareExcelData = (fileAData, fileBData) => {
   if (!idColumnA && fileAData.headers.length > 0) {
     idColumnA = fileAData.headers[0].key;
     console.log(
-      `Aucune colonne d'ID trouvée dans A, utilisation de la première colonne: "${idColumnA}"`
+      `Aucune colonne d'ID trouvée dans A, utilisation de la première colonne: "${idColumnA}"`,
     );
   }
 
   if (!idColumnB && fileBData.headers.length > 0) {
     idColumnB = fileBData.headers[0].key;
     console.log(
-      `Aucune colonne d'ID trouvée dans B, utilisation de la première colonne: "${idColumnB}"`
+      `Aucune colonne d'ID trouvée dans B, utilisation de la première colonne: "${idColumnB}"`,
     );
   }
 
   if (!idColumnA || !idColumnB) {
     throw new Error(
-      "Impossible de trouver une colonne d'identifiant dans l'un des fichiers"
+      "Impossible de trouver une colonne d'identifiant dans l'un des fichiers",
     );
   }
 
-  // Construire un dictionnaire de correspondance entre les colonnes des deux fichiers
+  // Construire la correspondance des colonnes en utilisant la normalisation
   const columnMapping = {};
+  const columnsA = new Set();
+  const columnsB = new Set();
+
   fileAData.headers.forEach((headerA) => {
     const normalizedA = normalizeColumnName(headerA.key);
+    columnsA.add(headerA.key);
+
     fileBData.headers.forEach((headerB) => {
       const normalizedB = normalizeColumnName(headerB.key);
       if (normalizedA === normalizedB) {
@@ -213,66 +273,105 @@ const compareExcelData = (fileAData, fileBData) => {
     });
   });
 
-  // Obtenir les colonnes communes pour la comparaison
+  fileBData.headers.forEach((headerB) => {
+    columnsB.add(headerB.key);
+  });
+
+  // Obtenir les colonnes communes et les colonnes manquantes
   const commonColumns = Object.keys(columnMapping).filter(
-    (col) => col !== idColumnA
+    (col) => col !== idColumnA,
   );
 
-  console.log(
-    `${commonColumns.length} colonnes communes trouvées pour la comparaison`
+  const missingInA = Array.from(columnsB).filter(
+    (colB) =>
+      !Array.from(columnsA).some(
+        (colA) => normalizeColumnName(colA) === normalizeColumnName(colB),
+      ),
   );
 
-  if (commonColumns.length === 0) {
-    console.log(
-      "Aucune colonne commune trouvée. Vérifiez les en-têtes des fichiers."
-    );
-    return results;
-  }
+  const missingInB = Array.from(columnsA).filter(
+    (colA) =>
+      !Array.from(columnsB).some(
+        (colB) => normalizeColumnName(colA) === normalizeColumnName(colB),
+      ),
+  );
 
-  // Déterminer les colonnes numériques
-  const numericColumns = [];
+  // Mettre à jour les statistiques
+  results.summary.columnStats.commonColumns = commonColumns;
+  results.summary.columnStats.missingInA = missingInA;
+  results.summary.columnStats.missingInB = missingInB;
 
-  // Analyser les données pour détecter les colonnes qui semblent contenir des nombres
-  const detectNumericColumns = () => {
-    commonColumns.forEach((colA) => {
-      const colB = columnMapping[colA];
+  // Classifier les colonnes
+  const { fixedColumns, variableColumns } = classifyColumns(commonColumns);
 
-      // Vérifier si les valeurs dans cette colonne sont majoritairement numériques
-      let numericCount = 0;
-      const sampleSize = Math.min(fileAData.data.length, 10); // Vérifier les 10 premières lignes
-
-      for (let i = 0; i < sampleSize; i++) {
-        if (i >= fileAData.data.length) break;
-
-        const valueA = fileAData.data[i][colA];
-        if (valueA !== null && valueA !== undefined) {
-          const parsedValue = parseValue(valueA);
-          if (typeof parsedValue === "number") {
-            numericCount++;
-          }
-        }
-      }
-
-      // Si plus de la moitié des valeurs sont numériques, considérer la colonne comme numérique
-      if (numericCount > sampleSize / 2) {
-        numericColumns.push(colA);
-      }
-    });
+  // Résultats de comparaison détaillés
+  results.summary.sequentialComparison = {
+    fixedElements: {
+      totalColumns: fixedColumns.length,
+      columnsWithErrors: [],
+      totalErrors: 0,
+    },
+    variableElements: {
+      totalColumns: variableColumns.length,
+      columnsWithErrors: [],
+      totalErrors: 0,
+    },
   };
 
-  detectNumericColumns();
-  console.log(`Colonnes numériques détectées: ${numericColumns.join(", ")}`);
+  console.log(`Éléments fixes détectés: ${fixedColumns.length}`);
+  console.log(`Éléments variables détectés: ${variableColumns.length}`);
+  console.log(`${commonColumns.length} colonnes communes trouvées`);
+  console.log(`${missingInA.length} colonnes présentes uniquement dans B`);
+  console.log(`${missingInB.length} colonnes présentes uniquement dans A`);
+
+  // Détection des doublons de matricules
+  const detectDuplicates = (data, idColumn, fileLabel) => {
+    const matriculeCounts = {};
+    const duplicates = [];
+
+    data.forEach((row, index) => {
+      const matricule = String(row[idColumn]).trim();
+      if (matricule) {
+        if (!matriculeCounts[matricule]) {
+          matriculeCounts[matricule] = 0;
+        }
+        matriculeCounts[matricule]++;
+      }
+    });
+
+    Object.entries(matriculeCounts).forEach(([matricule, count]) => {
+      if (count > 1) {
+        duplicates.push({
+          matricule,
+          count,
+          rows: data
+            .map((row, index) =>
+              String(row[idColumn]).trim() === matricule ? index + 1 : null,
+            )
+            .filter((i) => i !== null),
+        });
+      }
+    });
+
+    results.summary.duplicates[fileLabel] = duplicates;
+  };
+
+  detectDuplicates(fileAData.data, idColumnA, "fileA");
+  detectDuplicates(fileBData.data, idColumnB, "fileB");
 
   // Créer un dictionnaire pour le fichier B pour faciliter la recherche
   const fileBDict = {};
   fileBData.data.forEach((row) => {
     if (row[idColumnB] !== undefined && row[idColumnB] !== null) {
       const idValue = String(row[idColumnB]).trim();
-      fileBDict[idValue] = row;
+      if (!fileBDict[idValue]) {
+        fileBDict[idValue] = [];
+      }
+      fileBDict[idValue].push(row);
     }
   });
 
-  // Ensemble pour vérifier les doublons de matricules
+  // Ensemble pour vérifier les matricules uniques
   const matriculesA = new Set();
   const matriculesB = new Set();
 
@@ -294,8 +393,52 @@ const compareExcelData = (fileAData, fileBData) => {
 
   // Vérifier les doublons
   results.hasDuplicates =
-    matriculesA.size < fileAData.data.length ||
-    matriculesB.size < fileBData.data.length;
+    results.summary.duplicates.fileA.length > 0 ||
+    results.summary.duplicates.fileB.length > 0;
+
+  // Fonction pour comparer une catégorie de colonnes
+  const compareColumnCategory = (columns, category) => {
+    columns.forEach((colA) => {
+      const colB = columnMapping[colA];
+      const columnErrors = [];
+
+      fileAData.data.forEach((rowA, index) => {
+        const idValue = String(rowA[idColumnA]).trim();
+
+        if (fileBDict[idValue]) {
+          const rowB = fileBDict[idValue][0]; // Pour simplifier, prendre le premier
+          const valueA = parseValue(rowA[colA]);
+          const valueB = parseValue(rowB[colB]);
+
+          if (!areValuesEqual(valueA, valueB)) {
+            columnErrors.push({
+              matricule: idValue,
+              rowIndex: index,
+              valueA,
+              valueB,
+              difference: calculateDifference(valueA, valueB),
+            });
+          }
+        }
+      });
+
+      if (columnErrors.length > 0) {
+        results.summary.sequentialComparison[category].columnsWithErrors.push({
+          column: colA,
+          errorCount: columnErrors.length,
+          errors: columnErrors,
+        });
+        results.summary.sequentialComparison[category].totalErrors +=
+          columnErrors.length;
+      }
+    });
+  };
+
+  // Vérifier d'abord les éléments fixes
+  compareColumnCategory(fixedColumns, "fixedElements");
+
+  // Ensuite les éléments variables
+  compareColumnCategory(variableColumns, "variableElements");
 
   // Comparer chaque ligne du fichier A avec son équivalent dans le fichier B
   fileAData.data.forEach((rowA) => {
@@ -305,69 +448,85 @@ const compareExcelData = (fileAData, fileBData) => {
 
     // Si la ligne existe dans les deux fichiers
     if (fileBDict[idValue]) {
-      const rowB = fileBDict[idValue];
-      const rowDifferences = [];
+      fileBDict[idValue].forEach((rowB) => {
+        const rowDifferences = [];
 
-      // Comparer chaque cellule pour les colonnes communes
-      commonColumns.forEach((colA) => {
-        const colB = columnMapping[colA];
-        const valueA = parseValue(rowA[colA]);
-        const valueB = parseValue(rowB[colB]);
+        // Comparer chaque cellule pour les colonnes communes
+        commonColumns.forEach((colA) => {
+          const colB = columnMapping[colA];
+          const valueA = parseValue(rowA[colA]);
+          const valueB = parseValue(rowB[colB]);
 
-        // Ne pas considérer comme différence si les deux valeurs sont null/undefined
-        if (
-          (valueA === null && valueB === null) ||
-          (valueA === undefined && valueB === undefined)
-        ) {
-          return;
-        }
+          // Ne pas considérer comme différence si les deux valeurs sont null/undefined
+          if (
+            (valueA === null && valueB === null) ||
+            (valueA === undefined && valueB === undefined)
+          ) {
+            return;
+          }
 
-        // Comparer les valeurs
-        if (!areValuesEqual(valueA, valueB)) {
-          rowDifferences.push({
-            column: colA,
-            columnNameA: colA,
-            columnNameB: colB,
-            valueA,
-            valueB,
-            difference: calculateDifference(valueA, valueB),
-            isNumeric: numericColumns.includes(colA),
-          });
-        }
-      });
-
-      // Si des différences ont été trouvées
-      if (rowDifferences.length > 0) {
-        results.summary.totalDifferences++;
-
-        // Ajouter les colonnes avec différences au résumé
-        rowDifferences.forEach((diff) => {
-          const existingColDiff = results.summary.columnDifferences.find(
-            (c) => c.column === diff.column
-          );
-
-          if (existingColDiff) {
-            existingColDiff.count++;
-          } else {
-            results.summary.columnDifferences.push({
-              column: diff.column,
-              columnNameA: diff.columnNameA,
-              columnNameB: diff.columnNameB,
-              count: 1,
-              isNumeric: diff.isNumeric,
+          // Comparer les valeurs
+          if (!areValuesEqual(valueA, valueB)) {
+            rowDifferences.push({
+              column: colA,
+              columnNameA: colA,
+              columnNameB: colB,
+              valueA,
+              valueB,
+              difference: calculateDifference(valueA, valueB),
+              isNumeric: isNumericColumn(colA, fileAData.data),
             });
           }
         });
 
-        // Ajouter les détails complets
-        results.details.push({
-          id: idValue,
-          differences: rowDifferences,
-          rowData: {
-            matricule: idValue,
-          },
-        });
-      }
+        // Si des différences ont été trouvées
+        if (rowDifferences.length > 0) {
+          results.summary.totalDifferences++;
+
+          // Catégoriser les différences
+          const categorizedDifferences = {
+            fixed: [],
+            variable: [],
+          };
+
+          rowDifferences.forEach((diff) => {
+            if (fixedColumns.includes(diff.column)) {
+              categorizedDifferences.fixed.push(diff);
+            } else {
+              categorizedDifferences.variable.push(diff);
+            }
+          });
+
+          // Ajouter les colonnes avec différences au résumé
+          rowDifferences.forEach((diff) => {
+            const existingColDiff = results.summary.columnDifferences.find(
+              (c) => c.column === diff.column,
+            );
+
+            if (existingColDiff) {
+              existingColDiff.count++;
+            } else {
+              results.summary.columnDifferences.push({
+                column: diff.column,
+                columnNameA: diff.columnNameA,
+                columnNameB: diff.columnNameB,
+                count: 1,
+                isNumeric: diff.isNumeric,
+              });
+            }
+          });
+
+          // Ajouter les détails complets
+          results.details.push({
+            id: idValue,
+            differences: rowDifferences,
+            categorizedDifferences,
+            rowData: {
+              matricule: idValue,
+            },
+          });
+        }
+      });
     } else {
       // Ligne présente dans A mais absente dans B
       results.summary.totalDifferences++;
@@ -380,33 +539,25 @@ const compareExcelData = (fileAData, fileBData) => {
   });
 
   // Trouver les lignes qui sont dans B mais pas dans A
-  fileBData.data.forEach((rowB) => {
-    if (rowB[idColumnB] === undefined || rowB[idColumnB] === null) return;
-
-    const idValue = String(rowB[idColumnB]).trim();
-    const rowAExists = fileAData.data.some(
-      (row) =>
-        row[idColumnA] !== undefined &&
-        String(row[idColumnA]).trim() === idValue
-    );
-
-    if (!rowAExists) {
-      results.summary.totalDifferences++;
-      results.details.push({
-        id: idValue,
-        onlyInFileB: true,
-        rowData: { matricule: idValue, ...rowB },
-      });
+  matriculesB.forEach((idValue) => {
+    if (!matriculesA.has(idValue)) {
+      const rowB = fileBData.data.find(
+        (row) => String(row[idColumnB]).trim() === idValue,
+      );
+      if (rowB) {
+        results.summary.totalDifferences++;
+        results.details.push({
+          id: idValue,
+          onlyInFileB: true,
+          rowData: { matricule: idValue, ...rowB },
+        });
+      }
     }
   });
 
   console.log(
-    `Analyse terminée: ${results.summary.totalDifferences} différences trouvées`
+    `Analyse terminée: ${results.summary.totalDifferences} différences trouvées`,
   );
-
-  // Ajouter les informations de matricules au résultat
-  results.matriculeCount = matriculesA.size;
-  results.hasDuplicates = results.hasDuplicates;
 
   return results;
 };
@@ -568,6 +719,26 @@ const calculateDifference = (valueA, valueB) => {
 };
 
 /**
+ * Vérifier si une colonne contient principalement des valeurs numériques
+ */
+const isNumericColumn = (columnName, data) => {
+  const sampleSize = Math.min(10, data.length);
+  let numericCount = 0;
+
+  for (let i = 0; i < sampleSize && i < data.length; i++) {
+    const value = data[i][columnName];
+    if (value !== null && value !== undefined) {
+      const parsedValue = parseValue(value);
+      if (typeof parsedValue === "number") {
+        numericCount++;
+      }
+    }
+  }
+
+  return numericCount > sampleSize / 2;
+};
+
+/**
  * Extraire le mois et l'année d'un nom de fichier
  * Format attendu: NOM_DU_FICHIER_NUMERO_MOIS_ANNEE
  */
@@ -597,7 +768,7 @@ const detectProviderType = (headers) => {
 
   // Vérifier la présence des colonnes spécifiques
   const hasNewProviderColumns = newProviderColumns.some((col) =>
-    headerNames.includes(col)
+    headerNames.includes(col),
   );
 
   return hasNewProviderColumns ? "nouveau" : "ancien";
@@ -608,4 +779,5 @@ module.exports = {
   compareExcelData,
   extractDateFromFilename,
   detectProviderType,
+  classifyColumns,
 };
