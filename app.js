@@ -5,15 +5,26 @@ const fs = require("fs");
 const XLSX = require("xlsx");
 const excelParser = require("./utils/excel-parser");
 const excelExport = require("./utils/export-excel");
+const SessionManager = require("./utils/session-manager");
+const { initDatabase } = require("./config/database");
 
 // Configuration de l'application
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Initialiser la base de données au démarrage
+initDatabase()
+  .then(() => console.log("Base de données prête"))
+  .catch((err) => console.error("Erreur d'initialisation DB:", err));
+
 // Configuration des dossiers statiques et du moteur de template
 app.use(express.static(path.join(__dirname, "public")));
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
+
+// Ajouter le body parser pour lire le body des requêtes POST
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Configuration de Multer pour les uploads de fichiers
 const storage = multer.diskStorage({
@@ -57,6 +68,7 @@ app.get("/", (req, res) => {
 });
 
 // Route pour traiter l'upload des deux fichiers Excel
+// Route pour traiter l'upload des deux fichiers Excel
 app.post(
   "/compare",
   upload.fields([
@@ -81,16 +93,83 @@ app.post(
       const fileAData = await excelParser.parseExcelFile(fileAPath);
       const fileBData = await excelParser.parseExcelFile(fileBPath);
 
+      // Extraire les informations de date du nom de fichier
+      const dateInfoA = excelParser.extractDateFromFilename(fileAName);
+      const dateInfoB = excelParser.extractDateFromFilename(fileBName);
+
+      if (
+        !dateInfoA ||
+        !dateInfoB ||
+        dateInfoA.month !== dateInfoB.month ||
+        dateInfoA.year !== dateInfoB.year
+      ) {
+        return res.status(400).render("error", {
+          title: "Erreur",
+          message:
+            "Les deux fichiers doivent appartenir à la même période (mois/année)",
+        });
+      }
+
+      const { month, year } = dateInfoA;
+
+      // Détecter le type de prestataire
+      const providerType = excelParser.detectProviderType(fileAData.headers);
+
+      // Obtenir ou créer la session pour ce mois
+      const session = await SessionManager.getOrCreateSession(month, year);
+
+      // Vérifier si les fichiers existent déjà
+      const existingFiles = await SessionManager.getSessionHistory(
+        session.session_id
+      );
+
+      let fileAVersion = 1;
+      let fileBVersion = 1;
+      let isUpdate = false;
+
+      // Vérifier si les fichiers ont déjà été uploadés
+      existingFiles.forEach((file) => {
+        if (file.file_type === "fileA" && file.file_name === fileAName) {
+          fileAVersion = file.version + 1;
+          isUpdate = true;
+        }
+        if (file.file_type === "fileB" && file.file_name === fileBName) {
+          fileBVersion = file.version + 1;
+          isUpdate = true;
+        }
+      });
+
+      // Sauvegarder les nouvelles versions des fichiers
+      const fileASaved = await SessionManager.saveFileVersion(
+        session.session_id,
+        "fileA",
+        fileAName,
+        fileAData.data,
+        fileAData.formulas,
+        "System" // À remplacer par le vrai utilisateur quand l'auth est implémentée
+      );
+
+      const fileBSaved = await SessionManager.saveFileVersion(
+        session.session_id,
+        "fileB",
+        fileBName,
+        fileBData.data,
+        fileBData.formulas,
+        "System"
+      );
+
       // Réconciliation des données
       const comparisonResult = excelParser.compareExcelData(
         fileAData,
         fileBData
       );
 
-      // Stocker les résultats dans la session pour les exports
-      req.app.locals.lastComparisonResult = comparisonResult;
-      req.app.locals.fileAName = fileAName;
-      req.app.locals.fileBName = fileBName;
+      // Sauvegarder les résultats de comparaison
+      await SessionManager.saveComparisonResult(
+        session.session_id,
+        fileASaved.version, // ou Math.max(fileASaved.version, fileBSaved.version)
+        comparisonResult
+      );
 
       // Calculer les totaux pour l'affichage
       const summary = calculateSummaryData(comparisonResult);
@@ -102,13 +181,18 @@ app.post(
         fileBName,
         comparisonResult,
         summary,
+        session,
+        isUpdate,
+        providerType,
+        fileAVersion: fileASaved.version,
+        fileBVersion: fileBSaved.version,
       });
 
-      // Nettoyer les fichiers uploadés après traitement (optionnel)
+      // Nettoyer les fichiers uploadés après traitement
       setTimeout(() => {
         fs.unlinkSync(fileAPath);
         fs.unlinkSync(fileBPath);
-      }, 5000); // Délai de 5 secondes avant suppression
+      }, 5000);
     } catch (error) {
       console.error("Erreur lors de la comparaison des fichiers:", error);
       res.status(500).render("error", {
@@ -120,7 +204,6 @@ app.post(
     }
   }
 );
-
 // Route pour exporter les résultats en Excel
 app.get("/export-excel", (req, res) => {
   try {
@@ -158,6 +241,55 @@ app.get("/export-excel", (req, res) => {
     res
       .status(500)
       .send("Une erreur est survenue lors de l'export: " + error.message);
+  }
+});
+
+// Route pour afficher l'historique
+app.get("/history", async (req, res) => {
+  try {
+    const months = await SessionManager.getAllSessionMonths();
+    res.render("history", {
+      title: "Historique des réconciliations",
+      months,
+    });
+  } catch (error) {
+    console.error("Erreur lors de la récupération de l'historique:", error);
+    res.status(500).render("error", {
+      title: "Erreur",
+      message: "Erreur lors de la récupération de l'historique",
+    });
+  }
+});
+
+// Route pour afficher les détails d'une session
+app.get("/history/:sessionId", async (req, res) => {
+  try {
+    const sessionId = req.params.sessionId;
+    const history = await SessionManager.getSessionHistory(sessionId);
+
+    const groupedFiles = {
+      fileA: [],
+      fileB: [],
+    };
+
+    history.forEach((file) => {
+      groupedFiles[file.file_type].push(file);
+    });
+
+    res.render("session-history", {
+      title: `Historique - ${sessionId}`,
+      sessionId,
+      groupedFiles,
+    });
+  } catch (error) {
+    console.error(
+      "Erreur lors de la récupération de l'historique de session:",
+      error
+    );
+    res.status(500).render("error", {
+      title: "Erreur",
+      message: "Erreur lors de la récupération de l'historique de session",
+    });
   }
 });
 

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <%- include('partials/header') %>
+    <title><%= title %></title>
+  </head>
+  <body>
+    <div class="container">
+      <header class="my-4">
+        <h1>Session <%= sessionId %></h1>
+        <a href="/history" class="btn btn-secondary mb-3">
+          <i class="bi bi-arrow-left me-2"></i>Retour à l'historique
+        </a>
+      </header>
+
+      <div class="row">
+        <div class="col-md-6">
+          <div class="card shadow mb-4">
+            <div class="card-header bg-primary text-white">
+              <h4 class="card-title mb-0">Fichiers Fournisseur</h4>
+            </div>
+            <div class="card-body">
+              <% if (groupedFiles.fileA.length > 0) { %>
+              <table class="table table-sm">
+                <thead>
+                  <tr>
+                    <th>Version</th>
+                    <th>Nom du fichier</th>
+                    <th>Date</th>
+                    <th>Par</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% groupedFiles.fileA.forEach(file => { %>
+                  <tr>
+                    <td>v<%= file.version %></td>
+                    <td><%= file.file_name %></td>
+                    <td><%= new Date(file.created_at).toLocaleString() %></td>
+                    <td><%= file.created_by %></td>
+                  </tr>
+                  <% }) %>
+                </tbody>
+              </table>
+              <% } else { %>
+              <p class="text-muted">Aucun fichier fournisseur uploadé</p>
+              <% } %>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="card shadow mb-4">
+            <div class="card-header bg-secondary text-white">
+              <h4 class="card-title mb-0">Fichiers SEGUCE RDC</h4>
+            </div>
+            <div class="card-body">
+              <% if (groupedFiles.fileB.length > 0) { %>
+              <table class="table table-sm">
+                <thead>
+                  <tr>
+                    <th>Version</th>
+                    <th>Nom du fichier</th>
+                    <th>Date</th>
+                    <th>Par</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% groupedFiles.fileB.forEach(file => { %>
+                  <tr>
+                    <td>v<%= file.version %></td>
+                    <td><%= file.file_name %></td>
+                    <td><%= new Date(file.created_at).toLocaleString() %></td>
+                    <td><%= file.created_by %></td>
+                  </tr>
+                  <% }) %>
+                </tbody>
+              </table>
+              <% } else { %>
+              <p class="text-muted">Aucun fichier SEGUCE RDC uploadé</p>
+              <% } %>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <%- include('partials/footer') %>
+  </body>
+</html>

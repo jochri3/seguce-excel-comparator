@@ -14,6 +14,22 @@
                 <span class="badge bg-secondary">Fichier B: <%= fileBName %></span>
             </div>
         </header>
+        <% if (isUpdate) { %>
+   <div class="alert alert-warning mt-4">
+       <i class="bi bi-exclamation-triangle-fill me-2"></i>
+       <strong>Fichier mis à jour !</strong> 
+       Les fichiers ont été mis à jour. 
+       <span class="badge bg-warning text-dark ms-2">Fichier Fournisseur: v<%= fileAVersion %></span>
+       <span class="badge bg-warning text-dark ms-2">Fichier SEGUCE RDC: v<%= fileBVersion %></span>
+   </div>
+<% } %>
+
+<% if (providerType === 'ancien') { %>
+   <div class="alert alert-info mt-4">
+       <i class="bi bi-info-circle-fill me-2"></i>
+       Ce fichier provient de l'ancien prestataire. La comparaison se fera uniquement sur les colonnes communes.
+   </div>
+<% } %>
 
         <!-- Tableau de synthèse -->
         <div class="row mb-4">

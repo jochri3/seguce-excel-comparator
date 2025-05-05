@@ -1,7 +1,7 @@
 const XLSX = require("xlsx");
 
 /**
- * Lire et parser un fichier Excel
+ * Lire et parser un fichier Excel avec extraction des formules
  * @param {string} filePath - Chemin vers le fichier Excel
  * @returns {Object} - Données parsées du fichier Excel
  */
@@ -13,6 +13,7 @@ const parseExcelFile = (filePath) => {
       cellDates: true,
       cellNF: true,
       cellFormula: true,
+      raw: false,
     });
 
     const sheetNames = workbook.SheetNames;
@@ -21,117 +22,79 @@ const parseExcelFile = (filePath) => {
     }
 
     const worksheet = workbook.Sheets[sheetNames[0]];
-    const jsonData = XLSX.utils.sheet_to_json(worksheet, {
-      raw: false,
-      dateNF: "yyyy-mm-dd",
-      defval: null,
-      blankrows: false,
-      header: 1,
-    });
+    const range = XLSX.utils.decode_range(worksheet["!ref"]);
 
-    // Si les données sont vides, retourner un résultat vide
-    if (jsonData.length === 0) {
-      return {
-        sheetName: sheetNames[0],
-        headers: [],
-        data: [],
-        rawWorksheet: worksheet,
-      };
+    // Extraire les données et les formules séparément
+    const data = [];
+    const formulas = {};
+    const headers = [];
+
+    // D'abord, détecter la ligne d'en-tête
+    let headerRow = 0;
+    for (let r = range.s.r; r <= range.e.r; r++) {
+      for (let c = range.s.c; c <= range.e.c; c++) {
+        const cellAddress = XLSX.utils.encode_cell({ r, c });
+        const cell = worksheet[cellAddress];
+
+        if (cell && cell.t === "s" && cell.v) {
+          // Chercher des mots-clés typiques d'en-têtes
+          if (
+            cell.v.includes("Matricule") ||
+            cell.v.includes("BU") ||
+            cell.v.includes("Salaire") ||
+            cell.v.includes("Charge")
+          ) {
+            headerRow = r;
+            break;
+          }
+        }
+      }
+      if (headerRow > 0) break;
     }
 
-    const detectHeaderRow = (
-      jsonData,
-      possibleKeywords = ["Matricule", "matricule", "ID", "Id", "id", "Code"],
-      maxRows = 10
-    ) => {
-      for (let i = 0; i < Math.min(maxRows, jsonData.length); i++) {
-        const row = jsonData[i];
-        if (!row) continue;
+    // Extraire les en-têtes
+    for (let c = range.s.c; c <= range.e.c; c++) {
+      const cellAddress = XLSX.utils.encode_cell({ r: headerRow, c });
+      const cell = worksheet[cellAddress];
+      headers.push(cell ? cell.v : `Col${c}`);
+    }
 
-        for (let j = 0; j < row.length; j++) {
-          const cell = row[j];
-          if (!cell) continue;
+    // Extraire les données et formules
+    for (let r = headerRow + 1; r <= range.e.r; r++) {
+      const rowData = {};
+      const rowFormulas = {};
+      let hasData = false;
 
-          if (typeof cell === "string") {
-            for (const keyword of possibleKeywords) {
-              if (cell.includes(keyword)) {
-                return i;
-              }
-            }
+      for (let c = range.s.c; c <= range.e.c; c++) {
+        const cellAddress = XLSX.utils.encode_cell({ r, c });
+        const cell = worksheet[cellAddress];
+        const header = headers[c - range.s.c];
+
+        if (cell) {
+          // Extraire la valeur
+          rowData[header] = cell.v;
+          hasData = true;
+
+          // Extraire la formule si elle existe
+          if (cell.f) {
+            rowFormulas[header] = cell.f;
           }
         }
       }
-      // Si aucun mot-clé n'est trouvé, utiliser la première ligne comme en-tête
-      return 0;
-    };
 
-    const cleanHeaders = (headers) => {
-      return headers.map((header, index) => {
-        if (!header || header.toString().trim() === "") {
-          // Ne pas générer de noms Col_XX, utiliser un espace
-          return ` ${index}`;
-        }
-        return header.toString().trim();
-      });
-    };
-
-    const extractDataWithCleanHeaders = (jsonData, headerRowIndex) => {
-      if (headerRowIndex >= jsonData.length) {
-        headerRowIndex = 0; // Fallback à la première ligne
-      }
-
-      const headersRaw = jsonData[headerRowIndex] || [];
-      const headers = cleanHeaders(headersRaw);
-
-      const data = [];
-      for (let i = headerRowIndex + 1; i < jsonData.length; i++) {
-        const row = jsonData[i];
-        if (
-          !row ||
-          row.length === 0 ||
-          row.every((cell) => cell === null || cell === undefined)
-        )
-          continue;
-
-        const rowData = {};
-        for (let j = 0; j < headers.length; j++) {
-          // Ne pas inclure les colonnes avec des en-têtes uniquement numériques ou espaces
-          if (headers[j] && !headers[j].match(/^\s*\d+\s*$/)) {
-            rowData[headers[j]] = j < row.length ? row[j] : null;
-          }
-        }
-
-        // Ne pas inclure les lignes vides
-        if (Object.keys(rowData).length > 0) {
-          data.push(rowData);
+      if (hasData) {
+        data.push(rowData);
+        if (Object.keys(rowFormulas).length > 0) {
+          formulas[r - headerRow - 1] = rowFormulas;
         }
       }
-
-      return {
-        headers: headers
-          .filter((h) => !h.match(/^\s*\d+\s*$/)) // Exclure les en-têtes numériques ou espaces
-          .map((key) => ({ key, value: key })),
-        data,
-      };
-    };
-
-    // Détecter la ligne d'en-tête
-    const headerRowIndex = detectHeaderRow(jsonData);
-
-    // Extraire les données
-    const { headers, data } = extractDataWithCleanHeaders(
-      jsonData,
-      headerRowIndex
-    );
-
-    console.log(
-      `Données extraites: ${data.length} lignes avec ${headers.length} colonnes`
-    );
+    }
 
     return {
       sheetName: sheetNames[0],
-      headers,
+      headers: headers.map((h) => ({ key: h, value: h })),
       data,
+      formulas,
       rawWorksheet: worksheet,
     };
   } catch (error) {
@@ -604,7 +567,45 @@ const calculateDifference = (valueA, valueB) => {
   return "Valeurs différentes";
 };
 
+/**
+ * Extraire le mois et l'année d'un nom de fichier
+ * Format attendu: NOM_DU_FICHIER_NUMERO_MOIS_ANNEE
+ */
+const extractDateFromFilename = (filename) => {
+  const match = filename.match(/(\d{2})_(\d{4})/);
+  if (match) {
+    return {
+      month: parseInt(match[1], 10),
+      year: parseInt(match[2], 10),
+    };
+  }
+  return null;
+};
+
+/**
+ * Détecter le type de prestataire en fonction des colonnes
+ */
+const detectProviderType = (headers) => {
+  const headerNames = headers.map((h) => h.key.toLowerCase());
+
+  // Colonnes spécifiques au nouveau prestataire
+  const newProviderColumns = [
+    "prime migration it",
+    "aide rentrée scolaire",
+    "tva 16% frais services",
+  ];
+
+  // Vérifier la présence des colonnes spécifiques
+  const hasNewProviderColumns = newProviderColumns.some((col) =>
+    headerNames.includes(col)
+  );
+
+  return hasNewProviderColumns ? "nouveau" : "ancien";
+};
+
 module.exports = {
   parseExcelFile,
   compareExcelData,
+  extractDateFromFilename,
+  detectProviderType,
 };
