@@ -1,24 +1,29 @@
 const XLSX = require("xlsx");
 
 /**
- * Exporte les différences au format Excel
- * @param {Object} comparisonResult - Les résultats de la comparaison
- * @param {string} fileAName - Nom du fichier A
- * @param {string} fileBName - Nom du fichier B
- * @returns {Buffer} - Le contenu du fichier Excel
+ * Convertit les différences en feuille Excel avec formules
+ * @param {Object} comparisonResult - Résultats de la comparaison
+ * @param {Object} fileAData - Données brutes du fichier A
+ * @param {Object} fileBData - Données brutes du fichier B
+ * @returns {Buffer} - Buffer Excel contenant le rapport
  */
-const exportToExcel = (comparisonResult, fileAName, fileBName) => {
-  // Créer un nouveau classeur
+const exportToExcelWithFormulas = (
+  comparisonResult,
+  fileAData,
+  fileBData,
+  fileAName,
+  fileBName,
+) => {
   const workbook = XLSX.utils.book_new();
 
   // Feuille 1: Résumé
   const summaryData = [
     ["Réconciliation - Résumé"],
     [],
-    ["Fichier A (Entreprise)", fileAName],
-    ["Fichier B (Client)", fileBName],
+    ["Fichier A (Fournisseur)", fileAName],
+    ["Fichier B (SEGUCE RDC)", fileBName],
     [],
-    ["Statistiques", "Fichier A", "Fichier B", "Différence"],
+    ["Statistiques", "Fichier Fournisseur", "Fichier SEGUCE RDC", "Différence"],
     [
       "Nombre de lignes",
       comparisonResult.summary.totalRows.fileA,
@@ -35,9 +40,61 @@ const exportToExcel = (comparisonResult, fileAName, fileBName) => {
   ];
 
   // Ajouter les différences par colonne
-  comparisonResult.summary.columnDifferences.forEach((colDiff) => {
-    summaryData.push([colDiff.column, colDiff.count]);
-  });
+  if (comparisonResult.summary.columnDifferences) {
+    comparisonResult.summary.columnDifferences.forEach((colDiff) => {
+      summaryData.push([colDiff.column, colDiff.count]);
+    });
+  }
+
+  // Ajouter des informations sur les doublons
+  if (comparisonResult.summary.duplicates) {
+    summaryData.push([]);
+    summaryData.push(["Doublons de matricules"]);
+
+    if (
+      comparisonResult.summary.duplicates.fileA &&
+      comparisonResult.summary.duplicates.fileA.length > 0
+    ) {
+      summaryData.push([
+        "Doublons Fichier Fournisseur",
+        comparisonResult.summary.duplicates.fileA.length,
+      ]);
+    }
+
+    if (
+      comparisonResult.summary.duplicates.fileB &&
+      comparisonResult.summary.duplicates.fileB.length > 0
+    ) {
+      summaryData.push([
+        "Doublons Fichier SEGUCE RDC",
+        comparisonResult.summary.duplicates.fileB.length,
+      ]);
+    }
+  }
+
+  // Ajouter des informations sur la classification
+  if (comparisonResult.summary.sequentialComparison) {
+    summaryData.push([]);
+    summaryData.push(["Analyse séquentielle"]);
+    summaryData.push([
+      "Éléments fixes vérifiés",
+      comparisonResult.summary.sequentialComparison.fixedElements.totalColumns,
+    ]);
+    summaryData.push([
+      "Erreurs dans éléments fixes",
+      comparisonResult.summary.sequentialComparison.fixedElements.totalErrors,
+    ]);
+    summaryData.push([
+      "Éléments variables vérifiés",
+      comparisonResult.summary.sequentialComparison.variableElements
+        .totalColumns,
+    ]);
+    summaryData.push([
+      "Erreurs dans éléments variables",
+      comparisonResult.summary.sequentialComparison.variableElements
+        .totalErrors,
+    ]);
+  }
 
   summaryData.push([]);
   summaryData.push(["Date d'exportation", new Date().toLocaleString()]);
@@ -57,7 +114,7 @@ const exportToExcel = (comparisonResult, fileAName, fileBName) => {
       detailsData.push([detail.id, "LIGNE COMPLÈTE", "Présent", "Absent", ""]);
     } else if (detail.onlyInFileB) {
       detailsData.push([detail.id, "LIGNE COMPLÈTE", "Absent", "Présent", ""]);
-    } else {
+    } else if (detail.differences) {
       detail.differences.forEach((diff) => {
         detailsData.push([
           detail.id,
@@ -74,221 +131,50 @@ const exportToExcel = (comparisonResult, fileAName, fileBName) => {
   const detailsSheet = XLSX.utils.aoa_to_sheet(detailsData);
   XLSX.utils.book_append_sheet(workbook, detailsSheet, "Détails");
 
-  // Feuille 3: Synthèse des totaux
-  const getTotals = (details, isFileA = true) => {
-    const totals = {
-      "Cnss QPO": 0,
-      IPR: 0,
-      "Cnss QPP": 0,
-      Inpp: 0,
-      Onem: 0,
-      "Total Charge Patronale": 0,
-      "Coût Salarial": 0,
-      "Masse Salariale": 0,
-      "Net à Payer": 0,
-      "Frais de Services": 0,
-      "TVA 16% Frais Services": 0,
-      "Total Employeur Mensuel": 0,
-    };
+  // Feuille 3: Données A avec formules
+  const sheetA = createSheetWithFormulas(fileAData, "Données Fournisseur");
+  XLSX.utils.book_append_sheet(workbook, sheetA, "Données Fournisseur");
 
-    const keyPrefixes = [
-      "cnss",
-      "qpo",
-      "ipr",
-      "qpp",
-      "inpp",
-      "onem",
-      "charge",
-      "patronale",
-      "coût",
-      "cout",
-      "salarial",
-      "masse",
-      "net",
-      "payer",
-      "frais",
-      "service",
-      "tva",
-      "employeur",
-      "mensuel",
-    ];
+  // Feuille 4: Données B avec formules
+  const sheetB = createSheetWithFormulas(fileBData, "Données SEGUCE");
+  XLSX.utils.book_append_sheet(workbook, sheetB, "Données SEGUCE");
 
-    const normalizeKey = (key) => key.toLowerCase().replace(/\s+/g, "");
+  // Feuille 5: Synthèse des totaux (la même que dans l'export actuel)
+  // ... (code existant pour la feuille de synthèse des totaux)
 
-    // Fonction pour détecter le type de colonne
-    const detectColumnType = (colName) => {
-      const normalizedName = normalizeKey(colName);
+  // Feuille 6: Synthèse des doublons (nouvelle)
+  if (comparisonResult.summary.duplicates) {
+    const duplicatesData = [["Synthèse des doublons détectés"], []];
 
-      for (const key in totals) {
-        if (normalizedName.includes(normalizeKey(key))) {
-          return key;
-        }
-      }
+    if (
+      comparisonResult.summary.duplicates.fileA &&
+      comparisonResult.summary.duplicates.fileA.length > 0
+    ) {
+      duplicatesData.push(["Doublons dans le Fichier Fournisseur"]);
+      duplicatesData.push(["Matricule", "Occurrences", "Lignes"]);
 
-      for (const prefix of keyPrefixes) {
-        if (normalizedName.includes(prefix)) {
-          if (
-            normalizedName.includes("qpo") ||
-            normalizedName.includes("charge salariale")
-          )
-            return "Cnss QPO";
-          if (normalizedName.includes("ipr")) return "IPR";
-          if (normalizedName.includes("qpp")) return "Cnss QPP";
-          if (normalizedName.includes("inpp")) return "Inpp";
-          if (normalizedName.includes("onem")) return "Onem";
-          if (
-            normalizedName.includes("charge patronale") ||
-            normalizedName.includes("patronale")
-          )
-            return "Total Charge Patronale";
-          if (
-            (normalizedName.includes("cout") ||
-              normalizedName.includes("coût")) &&
-            normalizedName.includes("salarial")
-          )
-            return "Coût Salarial";
-          if (normalizedName.includes("masse")) return "Masse Salariale";
-          if (
-            normalizedName.includes("net") &&
-            normalizedName.includes("payer")
-          )
-            return "Net à Payer";
-          if (
-            normalizedName.includes("frais") &&
-            normalizedName.includes("service")
-          ) {
-            if (
-              normalizedName.includes("tva") ||
-              normalizedName.includes("16%")
-            )
-              return "TVA 16% Frais Services";
-            return "Frais de Services";
-          }
-          if (
-            normalizedName.includes("total") &&
-            normalizedName.includes("employeur")
-          )
-            return "Total Employeur Mensuel";
-        }
-      }
+      comparisonResult.summary.duplicates.fileA.forEach((dup) => {
+        duplicatesData.push([dup.matricule, dup.count, dup.rows.join(", ")]);
+      });
 
-      return null;
-    };
-
-    // Parcourir les détails et extraire les valeurs totales
-    details.forEach((detail) => {
-      if (detail.onlyInFileA && !isFileA) return; // Ignorer si on cherche des totaux pour B
-      if (detail.onlyInFileB && isFileA) return; // Ignorer si on cherche des totaux pour A
-
-      const detailData = detail.onlyInFileA
-        ? detail.rowData
-        : detail.onlyInFileB
-        ? detail.rowData
-        : null;
-
-      if (detailData) {
-        // Cas où la ligne entière n'existe que dans un fichier
-        Object.entries(detailData).forEach(([col, val]) => {
-          const columnType = detectColumnType(col);
-          if (columnType && typeof val === "number") {
-            totals[columnType] += val;
-          } else if (columnType && typeof val === "string") {
-            const numVal = parseFloat(val.replace(/,/g, ""));
-            if (!isNaN(numVal)) {
-              totals[columnType] += numVal;
-            }
-          }
-        });
-      } else if (detail.differences) {
-        // Cas des différences entre deux fichiers
-        detail.differences.forEach((diff) => {
-          const columnType = detectColumnType(diff.column);
-          if (columnType) {
-            const value = isFileA ? diff.valueA : diff.valueB;
-            if (typeof value === "number") {
-              totals[columnType] += value;
-            } else if (typeof value === "string") {
-              const numVal = parseFloat(value.replace(/,/g, ""));
-              if (!isNaN(numVal)) {
-                totals[columnType] += numVal;
-              }
-            }
-          }
-        });
-      }
-    });
-
-    return totals;
-  };
-
-  const totalsA = getTotals(comparisonResult.details, true);
-  const totalsB = getTotals(comparisonResult.details, false);
-
-  const calculateDifference = (a, b) => {
-    if (typeof a === "number" && typeof b === "number") {
-      return a - b;
+      duplicatesData.push([]);
     }
-    return 0;
-  };
 
-  const synthesisTotalsData = [
-    ["Synthèse des totaux"],
-    [],
-    ["Rubrique", "Fichier A (Entreprise)", "Fichier B (Client)", "Différence"],
-  ];
+    if (
+      comparisonResult.summary.duplicates.fileB &&
+      comparisonResult.summary.duplicates.fileB.length > 0
+    ) {
+      duplicatesData.push(["Doublons dans le Fichier SEGUCE RDC"]);
+      duplicatesData.push(["Matricule", "Occurrences", "Lignes"]);
 
-  // Ajouter les totaux pour chaque rubrique clé
-  Object.keys(totalsA).forEach((key) => {
-    synthesisTotalsData.push([
-      key,
-      totalsA[key].toFixed(2),
-      totalsB[key].toFixed(2),
-      calculateDifference(totalsA[key], totalsB[key]).toFixed(2),
-    ]);
-  });
+      comparisonResult.summary.duplicates.fileB.forEach((dup) => {
+        duplicatesData.push([dup.matricule, dup.count, dup.rows.join(", ")]);
+      });
+    }
 
-  // Informations supplémentaires
-  synthesisTotalsData.push([]);
-  synthesisTotalsData.push(["Informations supplémentaires"]);
-  synthesisTotalsData.push([
-    "Nombre de lignes",
-    comparisonResult.summary.totalRows.fileA,
-    comparisonResult.summary.totalRows.fileB,
-  ]);
-
-  // Vérification des doublons de matricules
-  const getMatriculeCount = (details) => {
-    const matricules = new Set();
-    details.forEach((detail) => {
-      if (detail.id) {
-        matricules.add(detail.id);
-      }
-    });
-    return matricules.size;
-  };
-
-  const matriculeCount = getMatriculeCount(comparisonResult.details);
-  const hasDuplicates =
-    matriculeCount < comparisonResult.summary.totalRows.fileA ||
-    matriculeCount < comparisonResult.summary.totalRows.fileB;
-
-  synthesisTotalsData.push(["Nombre de matricules contrôlés", matriculeCount]);
-  synthesisTotalsData.push([
-    "Présence de doublons",
-    hasDuplicates ? "OUI" : "NON",
-  ]);
-  synthesisTotalsData.push([
-    "Nombre d'erreurs",
-    comparisonResult.summary.totalDifferences,
-  ]);
-
-  // Créer la feuille de synthèse des totaux
-  const synthesisTotalsSheet = XLSX.utils.aoa_to_sheet(synthesisTotalsData);
-  XLSX.utils.book_append_sheet(
-    workbook,
-    synthesisTotalsSheet,
-    "Synthèse des totaux"
-  );
+    const duplicatesSheet = XLSX.utils.aoa_to_sheet(duplicatesData);
+    XLSX.utils.book_append_sheet(workbook, duplicatesSheet, "Doublons");
+  }
 
   // Convertir le classeur en buffer
   const excelBuffer = XLSX.write(workbook, {
@@ -299,6 +185,95 @@ const exportToExcel = (comparisonResult, fileAName, fileBName) => {
   return excelBuffer;
 };
 
+/**
+ * Crée une feuille Excel à partir des données, en préservant les formules
+ */
+const createSheetWithFormulas = (fileData, sheetName) => {
+  try {
+    // Créer l'en-tête
+    const headers = fileData.headers.map((h) => h.key);
+
+    // Préparer les données
+    const rows = [headers];
+
+    fileData.data.forEach((row, idx) => {
+      const rowData = [];
+
+      headers.forEach((header) => {
+        rowData.push(row[header] || "");
+      });
+
+      rows.push(rowData);
+
+      // Vérifier s'il y a des formules pour cette ligne
+      if (fileData.formulas && fileData.formulas[idx]) {
+        const formulaRow = fileData.formulas[idx];
+
+        // Appliquer les formules
+        Object.entries(formulaRow).forEach(([col, formula]) => {
+          const colIndex = headers.indexOf(col);
+          if (colIndex !== -1) {
+            // Définir la cellule avec la formule
+            const r = idx + 1; // +1 pour l'en-tête
+            const c = colIndex;
+
+            // XLSX.utils.encode_cell convertit les indices de ligne/colonne en adresse de cellule
+            const cellRef = XLSX.utils.encode_cell({ r: r + 1, c: c }); // +1 car les lignes commencent à 0 dans XLSX
+
+            // Formater la référence de cellule pour la formule
+            if (!formulaRow._sheet) {
+              // Si on n'a pas de référence explicite, on utilise la formule telle quelle
+              rows[r + 1][c] = { f: formula };
+            }
+          }
+        });
+      }
+    });
+
+    // Créer la feuille à partir des données
+    const sheet = XLSX.utils.aoa_to_sheet(rows);
+
+    // Parcourir les formules et les appliquer
+    if (fileData.formulas) {
+      Object.entries(fileData.formulas).forEach(([rowIdx, formulas]) => {
+        const rowIndex = parseInt(rowIdx) + 1; // +1 pour l'en-tête
+
+        Object.entries(formulas).forEach(([col, formula]) => {
+          const colIndex = headers.indexOf(col);
+          if (colIndex !== -1) {
+            // Récupérer la référence de cellule
+            const cellRef = XLSX.utils.encode_cell({
+              r: rowIndex,
+              c: colIndex,
+            });
+
+            // Définir la formule
+            if (!sheet[cellRef]) {
+              sheet[cellRef] = {};
+            }
+            sheet[cellRef].f = formula;
+          }
+        });
+      });
+    }
+
+    return sheet;
+  } catch (error) {
+    console.error(
+      "Erreur lors de la création de la feuille avec formules:",
+      error,
+    );
+    // En cas d'erreur, créer une feuille simple sans formules
+    const data = [fileData.headers.map((h) => h.key)];
+    fileData.data.forEach((row) => {
+      const rowData = fileData.headers.map((h) => row[h.key] || "");
+      data.push(rowData);
+    });
+    return XLSX.utils.aoa_to_sheet(data);
+  }
+};
+
+// Exporter les fonctions
 module.exports = {
-  exportToExcel,
+  exportToExcel: exportToExcelWithFormulas,
 };

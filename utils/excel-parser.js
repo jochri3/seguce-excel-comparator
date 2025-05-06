@@ -103,6 +103,38 @@ const parseExcelFile = (filePath) => {
   }
 };
 
+const getLexiconData = async () => {
+  const { getDatabase } = require("../config/database");
+  const db = await getDatabase();
+
+  return new Promise((resolve, reject) => {
+    db.all("SELECT * FROM lexicon_columns", [], (err, rows) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+
+      const lexicon = {
+        columnsByName: {},
+        fixedColumns: [],
+        variableColumns: [],
+      };
+
+      rows.forEach((row) => {
+        lexicon.columnsByName[row.column_name] = row;
+
+        if (row.column_type === "fixe") {
+          lexicon.fixedColumns.push(row.column_name);
+        } else {
+          lexicon.variableColumns.push(row.column_name);
+        }
+      });
+
+      resolve(lexicon);
+    });
+  });
+};
+
 /**
  * Classifier les colonnes en fixes et variables
  */

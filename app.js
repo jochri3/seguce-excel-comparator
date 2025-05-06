@@ -6,7 +6,7 @@ const XLSX = require("xlsx");
 const excelParser = require("./utils/excel-parser");
 const excelExport = require("./utils/export-excel");
 const SessionManager = require("./utils/session-manager");
-const { initDatabase } = require("./config/database");
+const { initDatabase, getDatabase } = require("./config/database");
 
 // Configuration de l'application
 const app = express();
@@ -120,7 +120,7 @@ app.post(
 
       // Vérifier si les fichiers existent déjà
       const existingFiles = await SessionManager.getSessionHistory(
-        session.session_id
+        session.session_id,
       );
 
       let fileAVersion = 1;
@@ -146,7 +146,7 @@ app.post(
         fileAName,
         fileAData.data,
         fileAData.formulas,
-        "System" // À remplacer par le vrai utilisateur quand l'auth est implémentée
+        "System", // À remplacer par le vrai utilisateur quand l'auth est implémentée
       );
 
       const fileBSaved = await SessionManager.saveFileVersion(
@@ -155,20 +155,20 @@ app.post(
         fileBName,
         fileBData.data,
         fileBData.formulas,
-        "System"
+        "System",
       );
 
       // Réconciliation des données
       const comparisonResult = excelParser.compareExcelData(
         fileAData,
-        fileBData
+        fileBData,
       );
 
       // Sauvegarder les résultats de comparaison
       await SessionManager.saveComparisonResult(
         session.session_id,
         fileASaved.version, // ou Math.max(fileASaved.version, fileBSaved.version)
-        comparisonResult
+        comparisonResult,
       );
 
       // Calculer les totaux pour l'affichage
@@ -202,12 +202,15 @@ app.post(
           error.message,
       });
     }
-  }
+  },
 );
 // Route pour exporter les résultats en Excel
+// Route pour exporter les résultats en Excel avec formules
 app.get("/export-excel", (req, res) => {
   try {
     const comparisonResult = req.app.locals.lastComparisonResult;
+    const fileAData = req.app.locals.fileAData;
+    const fileBData = req.app.locals.fileBData;
     const fileAName = req.app.locals.fileAName;
     const fileBName = req.app.locals.fileBName;
 
@@ -215,25 +218,27 @@ app.get("/export-excel", (req, res) => {
       return res
         .status(400)
         .send(
-          "Aucun résultat de comparaison disponible. Veuillez d'abord comparer deux fichiers."
+          "Aucun résultat de comparaison disponible. Veuillez d'abord comparer deux fichiers.",
         );
     }
 
     // Générer le fichier Excel
     const excelBuffer = excelExport.exportToExcel(
       comparisonResult,
+      fileAData,
+      fileBData,
       fileAName,
-      fileBName
+      fileBName,
     );
 
     // Envoyer le fichier au client
     res.setHeader(
       "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
     res.setHeader(
       "Content-Disposition",
-      "attachment; filename=reconciliation_paie.xlsx"
+      "attachment; filename=reconciliation_paie.xlsx",
     );
     return res.send(excelBuffer);
   } catch (error) {
@@ -284,7 +289,7 @@ app.get("/history/:sessionId", async (req, res) => {
   } catch (error) {
     console.error(
       "Erreur lors de la récupération de l'historique de session:",
-      error
+      error,
     );
     res.status(500).render("error", {
       title: "Erreur",
@@ -420,6 +425,211 @@ function calculateSummaryData(comparisonResult) {
     errorCount: comparisonResult.summary.totalDifferences,
   };
 }
+
+// Routes pour la gestion du lexique
+app.get("/lexique", async (req, res) => {
+  try {
+    const db = await getDatabase();
+
+    db.all(
+      "SELECT * FROM lexicon_columns ORDER BY column_name",
+      [],
+      (err, rows) => {
+        if (err) {
+          console.error("Erreur lors de la récupération du lexique:", err);
+          return res.status(500).render("error", {
+            title: "Erreur",
+            message: "Erreur lors de la récupération du lexique",
+          });
+        }
+
+        res.render("lexique", {
+          title: "Lexique des colonnes",
+          columns: rows,
+          queryParams: req.query,
+        });
+      },
+    );
+  } catch (error) {
+    console.error("Erreur database:", error);
+    res.status(500).render("error", {
+      title: "Erreur",
+      message: "Erreur de base de données",
+    });
+  }
+});
+
+// Route pour ajouter une entrée au lexique
+app.post(
+  "/lexique/ajouter",
+  express.urlencoded({ extended: true }),
+  async (req, res) => {
+    try {
+      const { column_name, column_type, description, formula } = req.body;
+
+      // Validation simple
+      if (!column_name) {
+        return res.status(400).render("error", {
+          title: "Erreur",
+          message: "Le nom de la colonne est obligatoire",
+        });
+      }
+
+      const db = await getDatabase();
+
+      db.run(
+        "INSERT INTO lexicon_columns (column_name, column_type, description, formula) VALUES (?, ?, ?, ?)",
+        [column_name, column_type, description, formula],
+        function (err) {
+          if (err) {
+            console.error("Erreur lors de l'ajout au lexique:", err);
+            return res.status(500).render("error", {
+              title: "Erreur",
+              message: "Erreur lors de l'ajout au lexique",
+            });
+          }
+
+          res.redirect("/lexique?success=true");
+        },
+      );
+    } catch (error) {
+      console.error("Erreur database:", error);
+      res.status(500).render("error", {
+        title: "Erreur",
+        message: "Erreur de base de données",
+      });
+    }
+  },
+);
+
+// Route pour supprimer une entrée du lexique
+app.post("/lexique/supprimer/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const db = await getDatabase();
+
+    db.run("DELETE FROM lexicon_columns WHERE id = ?", [id], function (err) {
+      if (err) {
+        console.error("Erreur lors de la suppression:", err);
+        return res.status(500).render("error", {
+          title: "Erreur",
+          message: "Erreur lors de la suppression",
+        });
+      }
+
+      res.redirect("/lexique?deleted=true");
+    });
+  } catch (error) {
+    console.error("Erreur database:", error);
+    res.status(500).render("error", {
+      title: "Erreur",
+      message: "Erreur de base de données",
+    });
+  }
+});
+
+// Route pour l'upload du fichier lexique CSV
+app.post("/lexique/upload", upload.single("lexique_file"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).render("error", {
+        title: "Erreur",
+        message: "Aucun fichier n'a été uploadé",
+      });
+    }
+
+    const csvContent = fs.readFileSync(req.file.path, "utf8");
+    const rows = csvContent.split("\n").map((line) => line.split(","));
+
+    // Supprimer la première ligne si c'est un en-tête
+    if (rows.length > 0 && rows[0][0].toLowerCase() === "colonne") {
+      rows.shift();
+    }
+
+    const db = await getDatabase();
+
+    // Insérer chaque ligne dans la base de données
+    let insertedCount = 0;
+    for (const row of rows) {
+      if (row.length >= 2) {
+        const column_name = row[0].trim();
+        const column_type = row[1].trim();
+        const description = row.length > 2 ? row[2].trim() : "";
+        const formula = row.length > 3 ? row[3].trim() : "";
+
+        if (column_name) {
+          db.run(
+            "INSERT OR IGNORE INTO lexicon_columns (column_name, column_type, description, formula) VALUES (?, ?, ?, ?)",
+            [column_name, column_type, description, formula],
+            function (err) {
+              if (!err && this.changes > 0) {
+                insertedCount++;
+              }
+            },
+          );
+        }
+      }
+    }
+
+    // Nettoyer le fichier uploadé
+    fs.unlinkSync(req.file.path);
+
+    res.redirect(`/lexique?imported=${insertedCount}`);
+  } catch (error) {
+    console.error("Erreur lors de l'import du lexique:", error);
+    res.status(500).render("error", {
+      title: "Erreur",
+      message: "Erreur lors de l'import du lexique CSV",
+    });
+  }
+});
+
+// Route pour exporter le lexique en CSV
+app.get("/lexique/export", async (req, res) => {
+  try {
+    const db = await getDatabase();
+
+    db.all(
+      "SELECT column_name, column_type, description, formula FROM lexicon_columns ORDER BY column_name",
+      [],
+      (err, rows) => {
+        if (err) {
+          console.error("Erreur lors de l'export du lexique:", err);
+          return res.status(500).render("error", {
+            title: "Erreur",
+            message: "Erreur lors de l'export du lexique",
+          });
+        }
+
+        // Générer le contenu CSV
+        let csvContent = "colonne,type,description,formule\n";
+        rows.forEach((row) => {
+          const values = [
+            `"${row.column_name.replace(/"/g, '""')}"`,
+            `"${row.column_type.replace(/"/g, '""')}"`,
+            `"${(row.description || "").replace(/"/g, '""')}"`,
+            `"${(row.formula || "").replace(/"/g, '""')}"`,
+          ];
+          csvContent += values.join(",") + "\n";
+        });
+
+        // Envoyer le fichier CSV
+        res.setHeader("Content-Type", "text/csv");
+        res.setHeader(
+          "Content-Disposition",
+          "attachment; filename=lexique_colonnes.csv",
+        );
+        res.send(csvContent);
+      },
+    );
+  } catch (error) {
+    console.error("Erreur database:", error);
+    res.status(500).render("error", {
+      title: "Erreur",
+      message: "Erreur de base de données",
+    });
+  }
+});
 
 // Gestion des erreurs 404
 app.use((req, res) => {
