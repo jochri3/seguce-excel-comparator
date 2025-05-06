@@ -346,6 +346,66 @@
             </div>
         </div>
 
+<h4 class="mt-4 text-primary">Analyse séquentielle</h4>
+
+<% if (comparisonResult.summary.sequentialComparison.fixedElements.totalErrors > 0) { %>
+    <div class="alert alert-danger">
+        <h5><i class="bi bi-exclamation-triangle-fill me-2"></i>Erreurs détectées dans les éléments fixes</h5>
+        <p>Des incohérences ont été trouvées dans les données qui devraient être stables. Il est recommandé de vérifier ces erreurs avant de continuer.</p>
+        
+        <table class="table table-sm table-bordered mt-3">
+            <thead>
+                <tr>
+                    <th>Colonne</th>
+                    <th>Nombre d'erreurs</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% comparisonResult.summary.sequentialComparison.fixedElements.columnsWithErrors.forEach(col => { %>
+                    <tr>
+                        <td><%= col.column %></td>
+                        <td><span class="badge bg-danger"><%= col.errorCount %></span></td>
+                    </tr>
+                <% }); %>
+            </tbody>
+        </table>
+    </div>
+<% } else { %>
+    <div class="alert alert-success">
+        <i class="bi bi-check-circle-fill me-2"></i>
+        Tous les éléments fixes correspondent !
+    </div>
+<% } %>
+
+<div class="mt-3">
+    <h6>Résumé de l'analyse:</h6>
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h6 class="card-title">Éléments fixes</h6>
+                    <p class="card-text">
+                        <strong><%= comparisonResult.summary.sequentialComparison.fixedElements.totalColumns %></strong> colonnes vérifiées
+                        <br>
+                        <strong><%= comparisonResult.summary.sequentialComparison.fixedElements.totalErrors %></strong> erreurs trouvées
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h6 class="card-title">Éléments variables</h6>
+                    <p class="card-text">
+                        <strong><%= comparisonResult.summary.sequentialComparison.variableElements.totalColumns %></strong> colonnes vérifiées
+                        <br>
+                        <strong><%= comparisonResult.summary.sequentialComparison.variableElements.totalErrors %></strong> erreurs trouvées
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
         <div class="row">
             <div class="col-12">
                 <div class="card shadow">
@@ -421,53 +481,153 @@
                                     </tbody>
                                 </table>
                             </div>
-                        <% } else { %>
-                            <!-- Code existant pour afficher les différences entre les fichiers -->
-                            <div class="table-responsive">
-                                <table class="table table-striped table-hover">
-                                    <thead class="table-dark">
-                                        <tr>
-                                            <th>Colonne</th>
-                                            <th>Fichier Fournisseur</th>
-                                            <th>Fichier SEGUCE RDC</th>
-                                            <th>Différence</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <% detail.differences.forEach(diff => { %>
-                                            <tr class="diff-row" data-column="<%= diff.column %>">
-                                                <td><strong><%= diff.column %></strong></td>
-                                                <td class="bg-light">
-                                                    <% if (diff.isNumeric) { %>
-                                                        <span class="text-primary fw-bold"><%= typeof diff.valueA === 'number' ? diff.valueA.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : diff.valueA %></span>
-                                                    <% } else { %>
-                                                        <span class="text-primary"><%= diff.valueA %></span>
-                                                    <% } %>
-                                                </td>
-                                                <td class="bg-light">
-                                                    <% if (diff.isNumeric) { %>
-                                                        <span class="text-secondary fw-bold"><%= typeof diff.valueB === 'number' ? diff.valueB.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : diff.valueB %></span>
-                                                    <% } else { %>
-                                                        <span class="text-secondary"><%= diff.valueB %></span>
-                                                    <% } %>
-                                                </td>
-                                                <td>
-                                                    <% if (typeof diff.difference === 'number') { %>
-                                                        <% if (diff.difference > 0) { %>
-                                                            <span class="text-danger fw-bold">+<%= diff.difference.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></span>
-                                                        <% } else { %>
-                                                            <span class="text-danger fw-bold"><%= diff.difference.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></span>
-                                                        <% } %>
-                                                    <% } else { %>
-                                                        <span class="text-danger fw-bold"><%= diff.difference %></span>
-                                                    <% } %>
-                                                </td>
-                                            </tr>
-                                        <% }); %>
-                                    </tbody>
-                                </table>
-                            </div>
-                        <% } %>
+                       <% } else { %>
+    <% if (detail.differences.length > 0) { %>
+        <% if (detail.categorizedDifferences && (detail.categorizedDifferences.fixed.length > 0 || detail.categorizedDifferences.variable.length > 0)) { %>
+            <% if (detail.categorizedDifferences.fixed.length > 0) { %>
+                <h6 class="mt-3 text-danger">Éléments fixes avec différences (<%= detail.categorizedDifferences.fixed.length %>)</h6>
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover border-danger">
+                        <thead class="table-danger">
+                            <tr>
+                                <th>Colonne</th>
+                                <th>Fichier Fournisseur</th>
+                                <th>Fichier SEGUCE RDC</th>
+                                <th>Différence</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% detail.categorizedDifferences.fixed.forEach(diff => { %>
+                                <tr class="diff-row" data-column="<%= diff.column %>">
+                                    <td><strong><%= diff.column %></strong></td>
+                                    <td class="bg-light">
+                                        <% if (diff.isNumeric) { %>
+                                            <span class="text-primary fw-bold"><%= typeof diff.valueA === 'number' ? diff.valueA.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : diff.valueA %></span>
+                                        <% } else { %>
+                                            <span class="text-primary"><%= diff.valueA %></span>
+                                        <% } %>
+                                    </td>
+                                    <td class="bg-light">
+                                        <% if (diff.isNumeric) { %>
+                                            <span class="text-secondary fw-bold"><%= typeof diff.valueB === 'number' ? diff.valueB.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : diff.valueB %></span>
+                                        <% } else { %>
+                                            <span class="text-secondary"><%= diff.valueB %></span>
+                                        <% } %>
+                                    </td>
+                                    <td>
+                                        <% if (typeof diff.difference === 'number') { %>
+                                            <% if (diff.difference > 0) { %>
+                                                <span class="text-danger fw-bold">+<%= diff.difference.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></span>
+                                            <% } else { %>
+                                                <span class="text-danger fw-bold"><%= diff.difference.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></span>
+                                            <% } %>
+                                        <% } else { %>
+                                            <span class="text-danger fw-bold"><%= diff.difference %></span>
+                                        <% } %>
+                                    </td>
+                                </tr>
+                            <% }); %>
+                        </tbody>
+                    </table>
+                </div>
+            <% } %>
+            
+            <% if (detail.categorizedDifferences.variable.length > 0) { %>
+                <h6 class="mt-3">Éléments variables avec différences (<%= detail.categorizedDifferences.variable.length %>)</h6>
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Colonne</th>
+                                <th>Fichier Fournisseur</th>
+                                <th>Fichier SEGUCE RDC</th>
+                                <th>Différence</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% detail.categorizedDifferences.variable.forEach(diff => { %>
+                                <tr class="diff-row" data-column="<%= diff.column %>">
+                                    <td><strong><%= diff.column %></strong></td>
+                                    <td class="bg-light">
+                                        <% if (diff.isNumeric) { %>
+                                            <span class="text-primary fw-bold"><%= typeof diff.valueA === 'number' ? diff.valueA.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : diff.valueA %></span>
+                                        <% } else { %>
+                                            <span class="text-primary"><%= diff.valueA %></span>
+                                        <% } %>
+                                    </td>
+                                    <td class="bg-light">
+                                        <% if (diff.isNumeric) { %>
+                                            <span class="text-secondary fw-bold"><%= typeof diff.valueB === 'number' ? diff.valueB.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : diff.valueB %></span>
+                                        <% } else { %>
+                                            <span class="text-secondary"><%= diff.valueB %></span>
+                                        <% } %>
+                                    </td>
+                                    <td>
+                                        <% if (typeof diff.difference === 'number') { %>
+                                            <% if (diff.difference > 0) { %>
+                                                <span class="text-danger fw-bold">+<%= diff.difference.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></span>
+                                            <% } else { %>
+                                                <span class="text-danger fw-bold"><%= diff.difference.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></span>
+                                            <% } %>
+                                        <% } else { %>
+                                            <span class="text-danger fw-bold"><%= diff.difference %></span>
+                                        <% } %>
+                                    </td>
+                                </tr>
+                            <% }); %>
+                        </tbody>
+                    </table>
+                </div>
+            <% } %>
+        <% } else { %>
+            <!-- Fallback si la catégorisation n'est pas disponible -->
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Colonne</th>
+                            <th>Fichier Fournisseur</th>
+                            <th>Fichier SEGUCE RDC</th>
+                            <th>Différence</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% detail.differences.forEach(diff => { %>
+                            <tr class="diff-row" data-column="<%= diff.column %>">
+                                <td><strong><%= diff.column %></strong></td>
+                                <td class="bg-light">
+                                    <% if (diff.isNumeric) { %>
+                                        <span class="text-primary fw-bold"><%= typeof diff.valueA === 'number' ? diff.valueA.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : diff.valueA %></span>
+                                    <% } else { %>
+                                        <span class="text-primary"><%= diff.valueA %></span>
+                                    <% } %>
+                                </td>
+                                <td class="bg-light">
+                                    <% if (diff.isNumeric) { %>
+                                        <span class="text-secondary fw-bold"><%= typeof diff.valueB === 'number' ? diff.valueB.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : diff.valueB %></span>
+                                    <% } else { %>
+                                        <span class="text-secondary"><%= diff.valueB %></span>
+                                    <% } %>
+                                </td>
+                                <td>
+                                    <% if (typeof diff.difference === 'number') { %>
+                                        <% if (diff.difference > 0) { %>
+                                            <span class="text-danger fw-bold">+<%= diff.difference.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></span>
+                                        <% } else { %>
+                                            <span class="text-danger fw-bold"><%= diff.difference.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></span>
+                                        <% } %>
+                                    <% } else { %>
+                                        <span class="text-danger fw-bold"><%= diff.difference %></span>
+                                    <% } %>
+                                </td>
+                            </tr>
+                        <% }); %>
+                    </tbody>
+                </table>
+            </div>
+        <% } %>
+    <% } %>
+<% } %>
                     </div>
                 </div>
             </div>
