@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <%- include('partials/header') %>
+    <title><%= title %></title>
+</head>
+<body>
+    <div class="container">
+        <header class="my-4">
+            <h1><%= title %></h1>
+            <a href="/lexique" class="btn btn-outline-secondary mb-3">
+                <i class="bi bi-arrow-left me-2"></i>Retour au lexique
+            </a>
+        </header>
+
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h4 class="card-title mb-0">Modifier la colonne</h4>
+            </div>
+            <div class="card-body">
+                <form action="/lexique/editer/<%= column.id %>" method="POST">
+                    <div class="mb-3">
+                        <label for="column_name" class="form-label">Nom de la colonne *</label>
+                        <input type="text" class="form-control" id="column_name" name="column_name" value="<%= column.column_name %>" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="column_type" class="form-label">Type</label>
+                        <select class="form-control" id="column_type" name="column_type">
+                            <option value="fixe" <%= column.column_type === 'fixe' ? 'selected' : '' %>>Élément fixe</option>
+                            <option value="variable" <%= column.column_type === 'variable' ? 'selected' : '' %>>Élément variable</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="3"><%= column.description %></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="formula" class="form-label">Formule</label>
+                        <textarea class="form-control" id="formula" name="formula" rows="3"><%= column.formula %></textarea>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save me-2"></i>Enregistrer
+                        </button>
+                        <a href="/lexique" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle me-2"></i>Annuler
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <%- include('partials/footer') %>
+</body>
+</html>

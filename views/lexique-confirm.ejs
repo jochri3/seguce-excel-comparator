@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <%- include('partials/header') %>
+    <title><%= title %></title>
+</head>
+<body>
+    <div class="container">
+        <header class="my-4">
+            <h1><%= title %></h1>
+            <a href="/lexique" class="btn btn-outline-secondary mb-3">
+                <i class="bi bi-arrow-left me-2"></i>Retour au lexique
+            </a>
+        </header>
+
+        <div class="card shadow mb-4">
+            <div class="card-header bg-warning text-dark">
+                <h4 class="card-title mb-0">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    Colonnes en conflit détectées
+                </h4>
+            </div>
+            <div class="card-body">
+                <p>Votre fichier contient <strong><%= newCount %> nouvelles colonnes</strong> et <strong><%= conflicts.length %> colonnes en conflit</strong> avec le lexique existant.</p>
+                
+                <h5>Colonnes en conflit :</h5>
+           <!-- Dans lexique-confirm.ejs -->
+<div class="table-responsive mb-4">
+    <table class="table table-striped table-bordered">
+        <thead class="table-light">
+            <tr>
+                <th>Nom de colonne</th>
+                <th>Type</th>
+                <th>Description</th>
+                <th>Formule</th>
+                <th>Différences</th>
+            </tr>
+        </thead>
+        <tbody>
+            <% conflicts.forEach(conflict => { %>
+                <tr>
+                    <td><strong><%= conflict.column_name %></strong></td>
+                    <td>
+                        <span class="badge <%= conflict.column_type === 'fixe' ? 'bg-primary' : 'bg-secondary' %>">
+                            <%= conflict.column_type %>
+                        </span>
+                        <% if (conflict.existing.column_type !== conflict.column_type) { %>
+                            <br><small class="text-muted">Actuel: <%= conflict.existing.column_type %></small>
+                        <% } %>
+                    </td>
+                    <td>
+                        <%= conflict.description || '-' %>
+                        <% if (conflict.existing.description !== conflict.description) { %>
+                            <br><small class="text-muted">Actuel: <%= conflict.existing.description || '-' %></small>
+                        <% } %>
+                    </td>
+                    <td>
+                        <code><%= conflict.formula || '-' %></code>
+                        <% if (conflict.existing.formula !== conflict.formula) { %>
+                            <br><small class="text-muted">Actuel: <code><%= conflict.existing.formula || '-' %></code></small>
+                        <% } %>
+                    </td>
+                    <td>
+                        <% 
+                            const changes = [];
+                            if (conflict.existing.column_type !== conflict.column_type) changes.push('Type');
+                            if (conflict.existing.description !== conflict.description) changes.push('Description');
+                            if (conflict.existing.formula !== conflict.formula) changes.push('Formule');
+                        %>
+                        <span class="badge bg-warning"><%= changes.join(', ') %></span>
+                    </td>
+                </tr>
+            <% }); %>
+        </tbody>
+    </table>
+</div>
+                <h5>Comment voulez-vous procéder ?</h5>
+                <form action="/lexique/confirm-import" method="POST">
+                    <div class="d-grid gap-3">
+                        <button type="submit" name="action" value="replace_all" class="btn btn-warning">
+                            <i class="bi bi-arrow-repeat me-2"></i>
+                            Mettre à jour les colonnes existantes et ajouter les nouvelles
+                        </button>
+                        
+                        <button type="submit" name="action" value="keep_existing" class="btn btn-info">
+                            <i class="bi bi-shield-lock me-2"></i>
+                            Conserver les colonnes existantes et ajouter uniquement les nouvelles
+                        </button>
+                        
+                        <button type="submit" name="action" value="clear_and_import" class="btn btn-danger">
+                            <i class="bi bi-trash me-2"></i>
+                            Remplacer tout le lexique par cette nouvelle liste
+                        </button>
+                        
+                        <a href="/lexique" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle me-2"></i>
+                            Annuler l'import
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <%- include('partials/footer') %>
+</body>
+</html>

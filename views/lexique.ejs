@@ -44,19 +44,19 @@
       </div>
       <% } %>
 
-      <% if (queryParams.imported) { %>
-      <div class="alert alert-success alert-dismissible fade show" role="alert">
+   <% if (queryParams.imported && queryParams.updated) { %>
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
         <i class="bi bi-check-circle-fill me-2"></i>
-        <%= req.query.imported %>
-        colonnes ont été importées avec succès !
-        <button
-          type="button"
-          class="btn-close"
-          data-bs-dismiss="alert"
-          aria-label="Close"
-        ></button>
-      </div>
-      <% } %>
+        <strong>Import réussi:</strong> <%= queryParams.imported %> nouvelles colonnes ajoutées et <%= queryParams.updated %> colonnes mises à jour.
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+<% } else if (queryParams.imported) { %>
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>
+        <strong>Import réussi:</strong> <%= queryParams.imported %> colonnes ont été importées.
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+<% } %>
 
       <div class="row">
         <div class="col-md-4">
@@ -140,7 +140,7 @@ colonne,type,description,formule</pre
                     class="form-control"
                     id="lexique_file"
                     name="lexique_file"
-                    accept=".csv"
+                    accept=".xlsx,.xls"
                     required
                   />
                 </div>
@@ -209,17 +209,18 @@ colonne,type,description,formule</pre
                         -
                         <% } %>
                       </td>
-                      <td>
-                        <form
-                          action="/lexique/supprimer/<%= col.id %>"
-                          method="POST"
-                          onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette colonne ?');"
-                        >
-                          <button type="submit" class="btn btn-sm btn-danger">
-                            <i class="bi bi-trash"></i>
-                          </button>
-                        </form>
-                      </td>
+                   <td>
+    <div class="btn-group" role="group">
+        <a href="/lexique/editer/<%= col.id %>" class="btn btn-sm btn-primary">
+            <i class="bi bi-pencil"></i>
+        </a>
+        <form action="/lexique/supprimer/<%= col.id %>" method="POST" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette colonne ?');" class="d-inline">
+            <button type="submit" class="btn btn-sm btn-danger">
+                <i class="bi bi-trash"></i>
+            </button>
+        </form>
+    </div>
+</td>
                     </tr>
                     <% }); %>
                     <% } else { %>

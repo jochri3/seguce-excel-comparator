@@ -175,6 +175,11 @@ app.post(
       const summary = calculateSummaryData(comparisonResult);
 
       // Rendre la page de comparaison avec les résultats
+      req.app.locals.lastComparisonResult = comparisonResult;
+      req.app.locals.fileAName = fileAName;
+      req.app.locals.fileBName = fileBName;
+      req.app.locals.fileAData = fileAData;
+      req.app.locals.fileBData = fileBData;
       res.render("compare", {
         title: "Résultats de la réconciliation",
         fileAName,
@@ -426,7 +431,7 @@ function calculateSummaryData(comparisonResult) {
   };
 }
 
-// Routes pour la gestion du lexique
+// // Routes pour la gestion du lexique
 app.get("/lexique", async (req, res) => {
   try {
     const db = await getDatabase();
@@ -459,7 +464,7 @@ app.get("/lexique", async (req, res) => {
   }
 });
 
-// Route pour ajouter une entrée au lexique
+// // Route pour ajouter une entrée au lexique
 app.post(
   "/lexique/ajouter",
   express.urlencoded({ extended: true }),
@@ -502,7 +507,7 @@ app.post(
   },
 );
 
-// Route pour supprimer une entrée du lexique
+// // Route pour supprimer une entrée du lexique
 app.post("/lexique/supprimer/:id", async (req, res) => {
   try {
     const id = req.params.id;
@@ -528,7 +533,7 @@ app.post("/lexique/supprimer/:id", async (req, res) => {
   }
 });
 
-// Route pour l'upload du fichier lexique CSV
+// // Route pour l'upload du fichier lexique Excel
 app.post("/lexique/upload", upload.single("lexique_file"), async (req, res) => {
   try {
     if (!req.file) {
@@ -538,53 +543,393 @@ app.post("/lexique/upload", upload.single("lexique_file"), async (req, res) => {
       });
     }
 
-    const csvContent = fs.readFileSync(req.file.path, "utf8");
-    const rows = csvContent.split("\n").map((line) => line.split(","));
+    // Lire le fichier Excel
+    const workbook = XLSX.readFile(req.file.path);
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    const data = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false });
 
-    // Supprimer la première ligne si c'est un en-tête
-    if (rows.length > 0 && rows[0][0].toLowerCase() === "colonne") {
-      rows.shift();
+    // Vérifier si le format correspond à ce que nous attendons
+    const headers = data[0] || [];
+    const hasValidHeaders =
+      headers.some(
+        (h) =>
+          (h && h.toLowerCase().includes("rubrique")) ||
+          (h && h.toLowerCase().includes("colonne")),
+      ) &&
+      headers.some(
+        (h) =>
+          (h && h.toLowerCase().includes("définition")) ||
+          (h && h.toLowerCase().includes("description")),
+      ) &&
+      headers.some((h) => h && h.toLowerCase().includes("formule"));
+
+    if (!hasValidHeaders) {
+      return res.status(400).render("error", {
+        title: "Format invalide",
+        message:
+          "Le format du fichier Excel n'est pas reconnu. Assurez-vous qu'il contient les colonnes 'Nom de la rubrique', 'Définition', et 'Formule de calcul'.",
+      });
     }
 
+    // Déterminer les indices des colonnes importantes
+    const colNameIndex = headers.findIndex(
+      (h) =>
+        (h && h.toLowerCase().includes("rubrique")) ||
+        (h && h.toLowerCase().includes("colonne")),
+    );
+    const descriptionIndex = headers.findIndex(
+      (h) =>
+        (h && h.toLowerCase().includes("définition")) ||
+        (h && h.toLowerCase().includes("description")),
+    );
+    const formulaIndex = headers.findIndex(
+      (h) =>
+        (h && h.toLowerCase().includes("formule")) ||
+        (h && h.toLowerCase().includes("calcul")),
+    );
+
+    // Extraire les données et vérifier les conflits
     const db = await getDatabase();
 
-    // Insérer chaque ligne dans la base de données
-    let insertedCount = 0;
-    for (const row of rows) {
-      if (row.length >= 2) {
-        const column_name = row[0].trim();
-        const column_type = row[1].trim();
-        const description = row.length > 2 ? row[2].trim() : "";
-        const formula = row.length > 3 ? row[3].trim() : "";
+    // Récupérer d'abord toutes les colonnes existantes - DÉPLACER À L'INTÉRIEUR D'UNE FONCTION ASYNC
+    const existingColumnsMap = await new Promise((resolve, reject) => {
+      db.all(
+        "SELECT column_name, id, column_type, description, formula FROM lexicon_columns",
+        [],
+        (err, rows) => {
+          if (err) reject(err);
+          else {
+            const map = {};
+            rows.forEach((row) => {
+              map[row.column_name] = row;
+            });
+            resolve(map);
+          }
+        },
+      );
+    });
 
-        if (column_name) {
-          db.run(
-            "INSERT OR IGNORE INTO lexicon_columns (column_name, column_type, description, formula) VALUES (?, ?, ?, ?)",
-            [column_name, column_type, description, formula],
-            function (err) {
-              if (!err && this.changes > 0) {
-                insertedCount++;
-              }
+    // Plus précis pour identifier les nouveaux et les conflits
+    const newEntries = [];
+    const conflictEntries = [];
+    const existingColumnNames = Object.keys(existingColumnsMap);
+
+    // Parcourir les données pour identifier nouveaux et conflits
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      if (!row[colNameIndex]) continue; // Ignorer les lignes sans nom de colonne
+
+      const column_name = row[colNameIndex].trim();
+      const description = row[descriptionIndex]
+        ? row[descriptionIndex].trim()
+        : "";
+      const formula = row[formulaIndex] ? row[formulaIndex].trim() : "";
+
+      // Déterminer si c'est un élément fixe ou variable en fonction des mots-clés
+      const fixedKeywords = [
+        "matricule",
+        "bu",
+        "charge",
+        "enfant",
+        "salaire mensuel",
+        "ancienneté",
+        "taux horaire",
+        "transport",
+        "logement",
+        "astreinte",
+        "forfait",
+        "prime fixe",
+        "détachement",
+      ];
+
+      const isFixed = fixedKeywords.some((keyword) =>
+        column_name.toLowerCase().includes(keyword.toLowerCase()),
+      );
+
+      const column_type = isFixed ? "fixe" : "variable";
+
+      if (existingColumnNames.includes(column_name)) {
+        // Comparer les valeurs pour voir s'il y a vraiment un conflit
+        const existing = existingColumnsMap[column_name];
+        const hasChanges =
+          existing.column_type !== column_type ||
+          existing.description !== description ||
+          existing.formula !== formula;
+
+        if (hasChanges) {
+          conflictEntries.push({
+            id: existing.id,
+            column_name,
+            description,
+            formula,
+            column_type,
+            existing: {
+              column_type: existing.column_type,
+              description: existing.description,
+              formula: existing.formula,
             },
-          );
+          });
         }
+      } else {
+        newEntries.push({
+          column_name,
+          description,
+          formula,
+          column_type,
+        });
       }
     }
+
+    // Si des conflits existent, demander confirmation à l'utilisateur
+    if (conflictEntries.length > 0) {
+      // Stocker temporairement les données et rediriger vers une page de confirmation
+      req.app.locals.pendingImport = {
+        newEntries,
+        conflictEntries,
+      };
+
+      return res.render("lexique-confirm", {
+        title: "Confirmation d'import",
+        newCount: newEntries.length,
+        conflicts: conflictEntries,
+        queryParams: req.query,
+      });
+    }
+
+    // Si pas de conflits, procéder à l'import des nouvelles entrées
+    const insertCount = await insertEntries(db, newEntries);
 
     // Nettoyer le fichier uploadé
     fs.unlinkSync(req.file.path);
 
-    res.redirect(`/lexique?imported=${insertedCount}`);
+    res.redirect(`/lexique?imported=${insertCount}`);
   } catch (error) {
     console.error("Erreur lors de l'import du lexique:", error);
     res.status(500).render("error", {
       title: "Erreur",
-      message: "Erreur lors de l'import du lexique CSV",
+      message: "Erreur lors de l'import du lexique Excel: " + error.message,
     });
   }
 });
 
-// Route pour exporter le lexique en CSV
+// // Fonction utilitaire pour insérer des entrées dans la base de données
+async function insertEntries(db, entries) {
+  let insertCount = 0;
+
+  for (const entry of entries) {
+    try {
+      await new Promise((resolve, reject) => {
+        // Utiliser INSERT OR IGNORE pour ignorer les erreurs de contrainte unique
+        db.run(
+          "INSERT OR IGNORE INTO lexicon_columns (column_name, column_type, description, formula) VALUES (?, ?, ?, ?)",
+          [
+            entry.column_name,
+            entry.column_type,
+            entry.description,
+            entry.formula,
+          ],
+          function (err) {
+            if (err) reject(err);
+            else {
+              if (this.changes > 0) {
+                insertCount++;
+              }
+              resolve();
+            }
+          },
+        );
+      });
+    } catch (error) {
+      console.error(
+        `Erreur lors de l'insertion de ${entry.column_name}:`,
+        error,
+      );
+      // Continuer avec les entrées suivantes malgré l'erreur
+    }
+  }
+
+  return insertCount;
+}
+
+// // Route pour gérer la confirmation d'import avec conflits
+// // Route pour gérer la confirmation d'import avec conflits
+app.post("/lexique/confirm-import", async (req, res) => {
+  try {
+    const { action } = req.body;
+    const pendingImport = req.app.locals.pendingImport;
+
+    if (!pendingImport) {
+      return res.status(400).render("error", {
+        title: "Erreur",
+        message: "Aucun import en attente. Veuillez réessayer.",
+      });
+    }
+
+    const db = await getDatabase();
+    let updateCount = 0;
+    let insertCount = 0;
+
+    if (action === "replace_all") {
+      // Mettre à jour les entrées existantes
+      for (const entry of pendingImport.conflictEntries) {
+        await new Promise((resolve, reject) => {
+          db.run(
+            "UPDATE lexicon_columns SET column_type = ?, description = ?, formula = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+            [entry.column_type, entry.description, entry.formula, entry.id],
+            function (err) {
+              if (err) reject(err);
+              else {
+                if (this.changes > 0) {
+                  updateCount++;
+                }
+                resolve();
+              }
+            },
+          );
+        });
+      }
+
+      // Ajouter les nouvelles entrées
+      insertCount = await insertEntries(db, pendingImport.newEntries);
+    } else if (action === "keep_existing") {
+      // Ne pas toucher aux entrées existantes, ajouter uniquement les nouvelles
+      insertCount = await insertEntries(db, pendingImport.newEntries);
+    } else if (action === "clear_and_import") {
+      // Supprimer toutes les entrées et importer les nouvelles
+      await new Promise((resolve, reject) => {
+        db.run("DELETE FROM lexicon_columns", [], function (err) {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+
+      // Importer toutes les entrées
+      const allEntries = pendingImport.newEntries.concat(
+        pendingImport.conflictEntries.map((entry) => ({
+          column_name: entry.column_name,
+          column_type: entry.column_type,
+          description: entry.description,
+          formula: entry.formula,
+        })),
+      );
+      insertCount = await insertEntries(db, allEntries);
+    }
+
+    // Nettoyer les données temporaires
+    delete req.app.locals.pendingImport;
+
+    res.redirect(`/lexique?imported=${insertCount}&updated=${updateCount}`);
+  } catch (error) {
+    console.error("Erreur lors de la confirmation d'import:", error);
+    res.status(500).render("error", {
+      title: "Erreur",
+      message: "Erreur lors de la confirmation d'import: " + error.message,
+    });
+  }
+});
+
+// // Route pour afficher le formulaire de modification
+app.get("/lexique/editer/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const db = await getDatabase();
+
+    db.get("SELECT * FROM lexicon_columns WHERE id = ?", [id], (err, row) => {
+      if (err) {
+        console.error("Erreur lors de la récupération de la colonne:", err);
+        return res.status(500).render("error", {
+          title: "Erreur",
+          message: "Erreur lors de la récupération de la colonne",
+        });
+      }
+
+      if (!row) {
+        return res.status(404).render("error", {
+          title: "Non trouvé",
+          message: "La colonne demandée n'existe pas",
+        });
+      }
+
+      res.render("lexique-edit", {
+        title: "Modifier une colonne",
+        column: row,
+        queryParams: req.query,
+      });
+    });
+  } catch (error) {
+    console.error("Erreur database:", error);
+    res.status(500).render("error", {
+      title: "Erreur",
+      message: "Erreur de base de données",
+    });
+  }
+});
+
+// // Route pour traiter la modification
+app.post("/lexique/editer/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { column_name, column_type, description, formula } = req.body;
+
+    // Validation
+    if (!column_name) {
+      return res.status(400).render("error", {
+        title: "Erreur",
+        message: "Le nom de la colonne est obligatoire",
+      });
+    }
+
+    const db = await getDatabase();
+
+    // Vérifier si le nouveau nom existe déjà (pour un autre ID)
+    db.get(
+      "SELECT id FROM lexicon_columns WHERE column_name = ? AND id != ?",
+      [column_name, id],
+      (err, existingRow) => {
+        if (err) {
+          console.error("Erreur lors de la vérification du nom:", err);
+          return res.status(500).render("error", {
+            title: "Erreur",
+            message: "Erreur lors de la vérification du nom",
+          });
+        }
+
+        if (existingRow) {
+          return res.status(400).render("error", {
+            title: "Nom déjà utilisé",
+            message: "Ce nom de colonne est déjà utilisé par une autre entrée",
+          });
+        }
+
+        // Mettre à jour l'entrée
+        db.run(
+          "UPDATE lexicon_columns SET column_name = ?, column_type = ?, description = ?, formula = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+          [column_name, column_type, description, formula, id],
+          function (err) {
+            if (err) {
+              console.error("Erreur lors de la mise à jour:", err);
+              return res.status(500).render("error", {
+                title: "Erreur",
+                message: "Erreur lors de la mise à jour",
+              });
+            }
+
+            res.redirect("/lexique?updated=true");
+          },
+        );
+      },
+    );
+  } catch (error) {
+    console.error("Erreur database:", error);
+    res.status(500).render("error", {
+      title: "Erreur",
+      message: "Erreur de base de données",
+    });
+  }
+});
+
+// // Route pour exporter le lexique en CSV
 app.get("/lexique/export", async (req, res) => {
   try {
     const db = await getDatabase();
