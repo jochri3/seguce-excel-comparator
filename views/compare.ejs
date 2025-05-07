@@ -85,123 +85,211 @@
                             </div>
                         </div>
 
-                        <h4 class="text-primary mb-3">Récapitulatif des montants clés</h4>
-                        <div class="table-responsive">
-                            <table class="table table-bordered table-striped">
-                                <thead class="table-dark">
-                                    <tr>
-                                        <th scope="col">Rubrique</th>
-                                        <th scope="col">Fichier Fournisseur</th>
-                                        <th scope="col">Fichier SEGUCE RDC</th>
-                                        <th scope="col">Différence</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <th colspan="4" class="table-secondary">Charges salariales</th>
-                                    </tr>
-                                    <tr>
-                                        <th scope="row">Cnss QPO</th>
-                                        <td class="text-end"><%= summary.totals.fileA['Cnss QPO'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                                        <td class="text-end"><%= summary.totals.fileB['Cnss QPO'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                                        <td class="text-end <%= (summary.totals.fileA['Cnss QPO'] - summary.totals.fileB['Cnss QPO']) !== 0 ? 'text-danger' : '' %>">
-                                            <%= (summary.totals.fileA['Cnss QPO'] - summary.totals.fileB['Cnss QPO']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <th scope="row">IPR</th>
-                                        <td class="text-end"><%= summary.totals.fileA['IPR'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                                        <td class="text-end"><%= summary.totals.fileB['IPR'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                                        <td class="text-end <%= (summary.totals.fileA['IPR'] - summary.totals.fileB['IPR']) !== 0 ? 'text-danger' : '' %>">
-                                            <%= (summary.totals.fileA['IPR'] - summary.totals.fileB['IPR']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <th colspan="4" class="table-secondary">Charges patronales</th>
-                                    </tr>
-                                    <tr>
-                                        <th scope="row">Cnss QPP</th>
-                                        <td class="text-end"><%= summary.totals.fileA['Cnss QPP'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                                        <td class="text-end"><%= summary.totals.fileB['Cnss QPP'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                                        <td class="text-end <%= (summary.totals.fileA['Cnss QPP'] - summary.totals.fileB['Cnss QPP']) !== 0 ? 'text-danger' : '' %>">
-                                            <%= (summary.totals.fileA['Cnss QPP'] - summary.totals.fileB['Cnss QPP']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <th scope="row">Inpp</th>
-                                        <td class="text-end"><%= summary.totals.fileA['Inpp'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                                        <td class="text-end"><%= summary.totals.fileB['Inpp'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                                        <td class="text-end <%= (summary.totals.fileA['Inpp'] - summary.totals.fileB['Inpp']) !== 0 ? 'text-danger' : '' %>">
-                                            <%= (summary.totals.fileA['Inpp'] - summary.totals.fileB['Inpp']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <th scope="row">Onem</th>
-                                        <td class="text-end"><%= summary.totals.fileA['Onem'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                                        <td class="text-end"><%= summary.totals.fileB['Onem'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                                        <td class="text-end <%= (summary.totals.fileA['Onem'] - summary.totals.fileB['Onem']) !== 0 ? 'text-danger' : '' %>">
-                                            <%= (summary.totals.fileA['Onem'] - summary.totals.fileB['Onem']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <th scope="row">Total Charge Patronale</th>
-                                        <td class="text-end"><%= summary.totals.fileA['Total Charge Patronale'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                                        <td class="text-end"><%= summary.totals.fileB['Total Charge Patronale'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                                        <td class="text-end <%= (summary.totals.fileA['Total Charge Patronale'] - summary.totals.fileB['Total Charge Patronale']) !== 0 ? 'text-danger' : '' %>">
-                                            <%= (summary.totals.fileA['Total Charge Patronale'] - summary.totals.fileB['Total Charge Patronale']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <th scope="row">Coût Salarial</th>
-                                        <td class="text-end"><%= summary.totals.fileA['Coût Salarial'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                                        <td class="text-end"><%= summary.totals.fileB['Coût Salarial'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                                        <td class="text-end <%= (summary.totals.fileA['Coût Salarial'] - summary.totals.fileB['Coût Salarial']) !== 0 ? 'text-danger' : '' %>">
-                                            <%= (summary.totals.fileA['Coût Salarial'] - summary.totals.fileB['Coût Salarial']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <th scope="row">Masse Salariale</th>
-                                        <td class="text-end"><%= summary.totals.fileA['Masse Salariale'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                                        <td class="text-end"><%= summary.totals.fileB['Masse Salariale'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                                        <td class="text-end <%= (summary.totals.fileA['Masse Salariale'] - summary.totals.fileB['Masse Salariale']) !== 0 ? 'text-danger' : '' %>">
-                                            <%= (summary.totals.fileA['Masse Salariale'] - summary.totals.fileB['Masse Salariale']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <th scope="row">Net à Payer</th>
-                                        <td class="text-end"><%= summary.totals.fileA['Net à Payer'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                                        <td class="text-end"><%= summary.totals.fileB['Net à Payer'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                                        <td class="text-end <%= (summary.totals.fileA['Net à Payer'] - summary.totals.fileB['Net à Payer']) !== 0 ? 'text-danger' : '' %>">
-                                            <%= (summary.totals.fileA['Net à Payer'] - summary.totals.fileB['Net à Payer']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <th scope="row">Frais de Services</th>
-                                        <td class="text-end"><%= summary.totals.fileA['Frais de Services'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                                        <td class="text-end"><%= summary.totals.fileB['Frais de Services'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                                        <td class="text-end <%= (summary.totals.fileA['Frais de Services'] - summary.totals.fileB['Frais de Services']) !== 0 ? 'text-danger' : '' %>">
-                                            <%= (summary.totals.fileA['Frais de Services'] - summary.totals.fileB['Frais de Services']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <th scope="row">TVA 16% Frais Services</th>
-                                        <td class="text-end"><%= summary.totals.fileA['TVA 16% Frais Services'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                                        <td class="text-end"><%= summary.totals.fileB['TVA 16% Frais Services'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                                        <td class="text-end <%= (summary.totals.fileA['TVA 16% Frais Services'] - summary.totals.fileB['TVA 16% Frais Services']) !== 0 ? 'text-danger' : '' %>">
-                                            <%= (summary.totals.fileA['TVA 16% Frais Services'] - summary.totals.fileB['TVA 16% Frais Services']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
-                                        </td>
-                                    </tr>
-                                    <tr class="table-primary fw-bold">
-                                        <th scope="row">Total Employeur Mensuel</th>
-                                        <td class="text-end"><%= summary.totals.fileA['Total Employeur Mensuel'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                                        <td class="text-end"><%= summary.totals.fileB['Total Employeur Mensuel'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                                        <td class="text-end <%= (summary.totals.fileA['Total Employeur Mensuel'] - summary.totals.fileB['Total Employeur Mensuel']) !== 0 ? 'text-danger fw-bold' : '' %>">
-                                            <%= (summary.totals.fileA['Total Employeur Mensuel'] - summary.totals.fileB['Total Employeur Mensuel']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
+                     
+
+<h4 class="text-primary mb-3">Récapitulatif des écarts des données fixes</h4>
+<div class="table-responsive">
+    <table class="table table-bordered table-striped">
+        <thead class="table-dark">
+            <tr>
+                <th scope="col">Rubrique</th>
+                <th scope="col">Fichier prestataire paie</th>
+                <th scope="col">Fichier SEGUCE</th>
+                <th scope="col">Différence</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Éléments fixes -->
+            <% const fixedElements = [
+                "Matricule", "BU", "Pers. à Charge", "Enfant Légal", "Salaire mensuel",
+                "Ancienneté mensuel", "Sur Salaire mensuel", "Taux horaire", 
+                "Transport mensuel", "Logement mensuel", "Prime astreinte", 
+                "Forfait heures supplémentaire", "Prime de détachement", "Prime Imposable Fixe"
+            ]; %>
+            
+            <% fixedElements.forEach(element => { 
+                // Rechercher l'élément dans les totaux
+                const valueA = summary.totals.fileA[element] || 0;
+                const valueB = summary.totals.fileB[element] || 0;
+                const diff = valueA - valueB;
+                const hasDiff = diff !== 0;
+            %>
+                <tr>
+                    <th scope="row"><%= element %></th>
+                    <td class="text-end"><%= valueA.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                    <td class="text-end"><%= valueB.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                    <td class="text-end <%= hasDiff ? 'text-danger' : '' %>">
+                        <%= diff.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                    </td>
+                </tr>
+            <% }); %>
+        </tbody>
+    </table>
+</div>
+
+<h4 class="text-primary mb-3">Récapitulatif des écarts des données variables</h4>
+<div class="table-responsive">
+    <table class="table table-bordered table-striped">
+        <thead class="table-dark">
+            <tr>
+                <th scope="col">Rubrique</th>
+                <th scope="col">Fichier prestataire paie</th>
+                <th scope="col">Fichier SEGUCE</th>
+                <th scope="col">Différence</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Éléments variables -->
+            <% const variableElements = [
+                "Jr. Prestés", "JAbsence", "Jrs. Maladie", "Congé Circ.", "Congé Maternité",
+                "Jrs. Ferié", "Jrs. Congé Payés", "Nbre Heure Supp. 1", "Nbre Heure Supp. 2", 
+                "Nbre Heure Supp. 3", "Heures de nuit 25%", "Regule sur congé", "Regule",
+                "Prime de bonne conduite auto", "Prime de production", "Aide sociale",
+                "Prime intérim", "13ème mois", "Pagne + frais de couture", "Prime migration IT",
+                "Aide rentrée scolaire", "Bonus", "Prime de mariage", "Prime Audit",
+                "Panier de fin d'année", "Autre prime", "Prime Imposable Variable"
+            ]; %>
+            
+            <% variableElements.forEach(element => { 
+                // Rechercher l'élément dans les totaux
+                const valueA = summary.totals.fileA[element] || 0;
+                const valueB = summary.totals.fileB[element] || 0;
+                const diff = valueA - valueB;
+                const hasDiff = diff !== 0;
+            %>
+                <tr>
+                    <th scope="row"><%= element %></th>
+                    <td class="text-end"><%= valueA.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                    <td class="text-end"><%= valueB.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                    <td class="text-end <%= hasDiff ? 'text-danger' : '' %>">
+                        <%= diff.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                    </td>
+                </tr>
+            <% }); %>
+        </tbody>
+    </table>
+</div>
+
+<h4 class="text-primary mb-3">Récapitulatif des charges</h4>
+<div class="table-responsive">
+    <table class="table table-bordered table-striped">
+        <thead class="table-dark">
+            <tr>
+                <th scope="col">Rubrique</th>
+                <th scope="col">Fichier prestataire paie</th>
+                <th scope="col">Fichier SEGUCE</th>
+                <th scope="col">Différence</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <th colspan="4" class="table-secondary">Charges salariales</th>
+            </tr>
+            <tr>
+                <th scope="row">Cnss QPO</th>
+                <td class="text-end"><%= summary.totals.fileA['Cnss QPO'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                <td class="text-end"><%= summary.totals.fileB['Cnss QPO'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                <td class="text-end <%= (summary.totals.fileA['Cnss QPO'] - summary.totals.fileB['Cnss QPO']) !== 0 ? 'text-danger' : '' %>">
+                    <%= (summary.totals.fileA['Cnss QPO'] - summary.totals.fileB['Cnss QPO']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row">IPR</th>
+                <td class="text-end"><%= summary.totals.fileA['IPR'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                <td class="text-end"><%= summary.totals.fileB['IPR'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                <td class="text-end <%= (summary.totals.fileA['IPR'] - summary.totals.fileB['IPR']) !== 0 ? 'text-danger' : '' %>">
+                    <%= (summary.totals.fileA['IPR'] - summary.totals.fileB['IPR']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                </td>
+            </tr>
+            <tr class="table-primary">
+                <th scope="row">Total charges salariales</th>
+                <td class="text-end fw-bold"><%= (summary.totals.fileA['Cnss QPO'] + summary.totals.fileA['IPR']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                <td class="text-end fw-bold"><%= (summary.totals.fileB['Cnss QPO'] + summary.totals.fileB['IPR']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                <td class="text-end fw-bold <%= ((summary.totals.fileA['Cnss QPO'] + summary.totals.fileA['IPR']) - (summary.totals.fileB['Cnss QPO'] + summary.totals.fileB['IPR'])) !== 0 ? 'text-danger' : '' %>">
+                    <%= ((summary.totals.fileA['Cnss QPO'] + summary.totals.fileA['IPR']) - (summary.totals.fileB['Cnss QPO'] + summary.totals.fileB['IPR'])).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                </td>
+            </tr>
+            <tr>
+                <th colspan="4" class="table-secondary">Charges patronales</th>
+            </tr>
+            <tr>
+                <th scope="row">Cnss QPP</th>
+                <td class="text-end"><%= summary.totals.fileA['Cnss QPP'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                <td class="text-end"><%= summary.totals.fileB['Cnss QPP'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                <td class="text-end <%= (summary.totals.fileA['Cnss QPP'] - summary.totals.fileB['Cnss QPP']) !== 0 ? 'text-danger' : '' %>">
+                    <%= (summary.totals.fileA['Cnss QPP'] - summary.totals.fileB['Cnss QPP']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row">Inpp</th>
+                <td class="text-end"><%= summary.totals.fileA['Inpp'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                <td class="text-end"><%= summary.totals.fileB['Inpp'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                <td class="text-end <%= (summary.totals.fileA['Inpp'] - summary.totals.fileB['Inpp']) !== 0 ? 'text-danger' : '' %>">
+                    <%= (summary.totals.fileA['Inpp'] - summary.totals.fileB['Inpp']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row">Onem</th>
+                <td class="text-end"><%= summary.totals.fileA['Onem'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                <td class="text-end"><%= summary.totals.fileB['Onem'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                <td class="text-end <%= (summary.totals.fileA['Onem'] - summary.totals.fileB['Onem']) !== 0 ? 'text-danger' : '' %>">
+                    <%= (summary.totals.fileA['Onem'] - summary.totals.fileB['Onem']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                </td>
+            </tr>
+            <tr class="table-primary">
+                <th scope="row">Total charges patronales</th>
+                <td class="text-end fw-bold"><%= summary.totals.fileA['Total Charge Patronale'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                <td class="text-end fw-bold"><%= summary.totals.fileB['Total Charge Patronale'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                <td class="text-end fw-bold <%= (summary.totals.fileA['Total Charge Patronale'] - summary.totals.fileB['Total Charge Patronale']) !== 0 ? 'text-danger' : '' %>">
+                    <%= (summary.totals.fileA['Total Charge Patronale'] - summary.totals.fileB['Total Charge Patronale']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                </td>
+            </tr>
+            <tr>
+                <th colspan="4" class="table-secondary">Répartition des coûts liés aux salaires</th>
+            </tr>
+            <tr>
+                <th scope="row">Coût Salarial</th>
+                <td class="text-end"><%= summary.totals.fileA['Coût Salarial'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                <td class="text-end"><%= summary.totals.fileB['Coût Salarial'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                <td class="text-end <%= (summary.totals.fileA['Coût Salarial'] - summary.totals.fileB['Coût Salarial']) !== 0 ? 'text-danger' : '' %>">
+                    <%= (summary.totals.fileA['Coût Salarial'] - summary.totals.fileB['Coût Salarial']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row">Masse Salariale</th>
+                <td class="text-end"><%= summary.totals.fileA['Masse Salariale'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                <td class="text-end"><%= summary.totals.fileB['Masse Salariale'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                <td class="text-end <%= (summary.totals.fileA['Masse Salariale'] - summary.totals.fileB['Masse Salariale']) !== 0 ? 'text-danger' : '' %>">
+                    <%= (summary.totals.fileA['Masse Salariale'] - summary.totals.fileB['Masse Salariale']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row">Net à Payer</th>
+                <td class="text-end"><%= summary.totals.fileA['Net à Payer'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                <td class="text-end"><%= summary.totals.fileB['Net à Payer'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                <td class="text-end <%= (summary.totals.fileA['Net à Payer'] - summary.totals.fileB['Net à Payer']) !== 0 ? 'text-danger' : '' %>">
+                    <%= (summary.totals.fileA['Net à Payer'] - summary.totals.fileB['Net à Payer']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row">Frais de Services</th>
+                <td class="text-end"><%= summary.totals.fileA['Frais de Services'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                <td class="text-end"><%= summary.totals.fileB['Frais de Services'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                <td class="text-end <%= (summary.totals.fileA['Frais de Services'] - summary.totals.fileB['Frais de Services']) !== 0 ? 'text-danger' : '' %>">
+                    <%= (summary.totals.fileA['Frais de Services'] - summary.totals.fileB['Frais de Services']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row">TVA 16% Frais Services</th>
+                <td class="text-end"><%= summary.totals.fileA['TVA 16% Frais Services'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                <td class="text-end"><%= summary.totals.fileB['TVA 16% Frais Services'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                <td class="text-end <%= (summary.totals.fileA['TVA 16% Frais Services'] - summary.totals.fileB['TVA 16% Frais Services']) !== 0 ? 'text-danger' : '' %>">
+                    <%= (summary.totals.fileA['TVA 16% Frais Services'] - summary.totals.fileB['TVA 16% Frais Services']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
                     </div>
                 </div>
             </div>
