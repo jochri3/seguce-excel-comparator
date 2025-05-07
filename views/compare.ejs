@@ -10,8 +10,8 @@
             <h1><%= title %></h1>
             <p class="lead">Résultats de la réconciliation entre les fichiers</p>
             <div class="d-flex justify-content-center">
-                <span class="badge bg-primary me-2">Fichier A: <%= fileAName %></span>
-                <span class="badge bg-secondary">Fichier B: <%= fileBName %></span>
+                <span class="badge bg-primary me-2">Fichier Fournisseur: <%= fileAName %></span>
+                <span class="badge bg-secondary">Fichier SEGUCE RDC: <%= fileBName %></span>
             </div>
         </header>
         <% if (isUpdate) { %>
@@ -45,11 +45,11 @@
                                 <table class="table table-bordered table-striped">
                                 <tbody>
     <tr>
-        <th>Nombre de lignes (Fichier A)</th>
+        <th>Nombre de lignes (Fichier Fournisseur)</th>
         <td><%= comparisonResult.summary.totalRows.fileA %></td>
     </tr>
     <tr>
-        <th>Nombre de lignes (Fichier B)</th>
+        <th>Nombre de lignes (Fichier SEGUCE RDC)</th>
         <td><%= comparisonResult.summary.totalRows.fileB %></td>
     </tr>
     <tr>
@@ -91,8 +91,8 @@
                                 <thead class="table-dark">
                                     <tr>
                                         <th scope="col">Rubrique</th>
-                                        <th scope="col">Fichier A (Entreprise)</th>
-                                        <th scope="col">Fichier B (Client)</th>
+                                        <th scope="col">Fichier Fournisseur</th>
+                                        <th scope="col">Fichier SEGUCE RDC</th>
                                         <th scope="col">Différence</th>
                                     </tr>
                                 </thead>
@@ -226,7 +226,7 @@
                             <div class="col-md-4">
                                 <div class="card text-center mb-3">
                                     <div class="card-body">
-                                        <h5 class="card-title">Lignes Fichier A</h5>
+                                        <h5 class="card-title">Lignes Fichier Fournisseur</h5>
                                         <h2 class="text-primary"><%= comparisonResult.summary.totalRows.fileA %></h2>
                                     </div>
                                 </div>
@@ -234,7 +234,7 @@
                             <div class="col-md-4">
                                 <div class="card text-center mb-3">
                                     <div class="card-body">
-                                        <h5 class="card-title">Lignes Fichier B</h5>
+                                        <h5 class="card-title">Lignes Fichier SEGUCE RDC</h5>
                                         <h2 class="text-secondary"><%= comparisonResult.summary.totalRows.fileB %></h2>
                                     </div>
                                 </div>
@@ -348,7 +348,8 @@
 
 <h4 class="mt-4 text-primary">Analyse séquentielle</h4>
 
-<% if (comparisonResult.summary.sequentialComparison.fixedElements.totalErrors > 0) { %>
+<!-- MODIFICATION ICI: Ajout des vérifications conditionnelles complètes -->
+<% if (comparisonResult.summary && comparisonResult.summary.sequentialComparison && comparisonResult.summary.sequentialComparison.fixedElements && comparisonResult.summary.sequentialComparison.fixedElements.totalErrors > 0) { %>
     <div class="alert alert-danger">
         <h5><i class="bi bi-exclamation-triangle-fill me-2"></i>Erreurs détectées dans les éléments fixes</h5>
         <p>Des incohérences ont été trouvées dans les données qui devraient être stables. Il est recommandé de vérifier ces erreurs avant de continuer.</p>
@@ -385,9 +386,10 @@
                 <div class="card-body">
                     <h6 class="card-title">Éléments fixes</h6>
                     <p class="card-text">
-                        <strong><%= comparisonResult.summary.sequentialComparison.fixedElements.totalColumns %></strong> colonnes vérifiées
+                        <!-- MODIFICATION ICI: Ajout des vérifications conditionnelles pour les propriétés -->
+                        <strong><%= comparisonResult.summary && comparisonResult.summary.sequentialComparison && comparisonResult.summary.sequentialComparison.fixedElements ? comparisonResult.summary.sequentialComparison.fixedElements.totalColumns : 0 %></strong> colonnes vérifiées
                         <br>
-                        <strong><%= comparisonResult.summary.sequentialComparison.fixedElements.totalErrors %></strong> erreurs trouvées
+                        <strong><%= comparisonResult.summary && comparisonResult.summary.sequentialComparison && comparisonResult.summary.sequentialComparison.fixedElements ? comparisonResult.summary.sequentialComparison.fixedElements.totalErrors : 0 %></strong> erreurs trouvées
                     </p>
                 </div>
             </div>
@@ -397,9 +399,10 @@
                 <div class="card-body">
                     <h6 class="card-title">Éléments variables</h6>
                     <p class="card-text">
-                        <strong><%= comparisonResult.summary.sequentialComparison.variableElements.totalColumns %></strong> colonnes vérifiées
+                        <!-- MODIFICATION ICI: Ajout des vérifications conditionnelles pour les propriétés -->
+                        <strong><%= comparisonResult.summary && comparisonResult.summary.sequentialComparison && comparisonResult.summary.sequentialComparison.variableElements ? comparisonResult.summary.sequentialComparison.variableElements.totalColumns : 0 %></strong> colonnes vérifiées
                         <br>
-                        <strong><%= comparisonResult.summary.sequentialComparison.variableElements.totalErrors %></strong> erreurs trouvées
+                        <strong><%= comparisonResult.summary && comparisonResult.summary.sequentialComparison && comparisonResult.summary.sequentialComparison.variableElements ? comparisonResult.summary.sequentialComparison.variableElements.totalErrors : 0 %></strong> erreurs trouvées
                     </p>
                 </div>
             </div>

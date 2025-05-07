@@ -20,10 +20,10 @@ const exportToExcelWithFormulas = (
   const summaryData = [
     ["Réconciliation - Résumé"],
     [],
-    ["Fichier A (Fournisseur)", fileAName],
-    ["Fichier B (SEGUCE RDC)", fileBName],
+    ["Fichier Fournisseur", fileAName],   // MODIFICATION: Changé de "Fichier A" à "Fichier Fournisseur"
+    ["Fichier SEGUCE RDC", fileBName],    // MODIFICATION: Changé de "Fichier B" à "Fichier SEGUCE RDC"
     [],
-    ["Statistiques", "Fichier Fournisseur", "Fichier SEGUCE RDC", "Différence"],
+    ["Statistiques", "Fichier Fournisseur", "Fichier SEGUCE RDC", "Différence"],  // MODIFICATION: Labels mis à jour
     [
       "Nombre de lignes",
       comparisonResult.summary.totalRows.fileA,
@@ -56,7 +56,7 @@ const exportToExcelWithFormulas = (
       comparisonResult.summary.duplicates.fileA.length > 0
     ) {
       summaryData.push([
-        "Doublons Fichier Fournisseur",
+        "Doublons Fichier Fournisseur",   // MODIFICATION: Label mis à jour
         comparisonResult.summary.duplicates.fileA.length,
       ]);
     }
@@ -66,7 +66,7 @@ const exportToExcelWithFormulas = (
       comparisonResult.summary.duplicates.fileB.length > 0
     ) {
       summaryData.push([
-        "Doublons Fichier SEGUCE RDC",
+        "Doublons Fichier SEGUCE RDC",     // MODIFICATION: Label mis à jour
         comparisonResult.summary.duplicates.fileB.length,
       ]);
     }
@@ -105,7 +105,7 @@ const exportToExcelWithFormulas = (
 
   // Feuille 2: Détails des différences
   const detailsData = [
-    ["ID", "Colonne", "Valeur Fichier A", "Valeur Fichier B", "Différence"],
+    ["ID", "Colonne", "Valeur Fichier Fournisseur", "Valeur Fichier SEGUCE RDC", "Différence"],  // MODIFICATION: Labels mis à jour
   ];
 
   // Ajouter les détails des différences
@@ -131,13 +131,13 @@ const exportToExcelWithFormulas = (
   const detailsSheet = XLSX.utils.aoa_to_sheet(detailsData);
   XLSX.utils.book_append_sheet(workbook, detailsSheet, "Détails");
 
-  // Feuille 3: Données A avec formules
-  const sheetA = createSheetWithFormulas(fileAData, "Données Fournisseur");
-  XLSX.utils.book_append_sheet(workbook, sheetA, "Données Fournisseur");
+  // Feuille 3: Données Fournisseur avec formules
+  const sheetA = createSheetWithFormulas(fileAData, "Données Fournisseur");  // MODIFICATION: Nom feuille mis à jour
+  XLSX.utils.book_append_sheet(workbook, sheetA, "Données Fournisseur");     // MODIFICATION: Nom feuille mis à jour
 
-  // Feuille 4: Données B avec formules
-  const sheetB = createSheetWithFormulas(fileBData, "Données SEGUCE");
-  XLSX.utils.book_append_sheet(workbook, sheetB, "Données SEGUCE");
+  // Feuille 4: Données SEGUCE avec formules
+  const sheetB = createSheetWithFormulas(fileBData, "Données SEGUCE");      // MODIFICATION: Nom feuille mis à jour
+  XLSX.utils.book_append_sheet(workbook, sheetB, "Données SEGUCE");         // MODIFICATION: Nom feuille mis à jour
 
   // Feuille 5: Synthèse des totaux (la même que dans l'export actuel)
   // ... (code existant pour la feuille de synthèse des totaux)
@@ -150,7 +150,7 @@ const exportToExcelWithFormulas = (
       comparisonResult.summary.duplicates.fileA &&
       comparisonResult.summary.duplicates.fileA.length > 0
     ) {
-      duplicatesData.push(["Doublons dans le Fichier Fournisseur"]);
+      duplicatesData.push(["Doublons dans le Fichier Fournisseur"]);  // MODIFICATION: Label mis à jour
       duplicatesData.push(["Matricule", "Occurrences", "Lignes"]);
 
       comparisonResult.summary.duplicates.fileA.forEach((dup) => {
@@ -164,7 +164,7 @@ const exportToExcelWithFormulas = (
       comparisonResult.summary.duplicates.fileB &&
       comparisonResult.summary.duplicates.fileB.length > 0
     ) {
-      duplicatesData.push(["Doublons dans le Fichier SEGUCE RDC"]);
+      duplicatesData.push(["Doublons dans le Fichier SEGUCE RDC"]);  // MODIFICATION: Label mis à jour
       duplicatesData.push(["Matricule", "Occurrences", "Lignes"]);
 
       comparisonResult.summary.duplicates.fileB.forEach((dup) => {
@@ -183,8 +183,8 @@ const exportToExcelWithFormulas = (
     [
       "Matricule",
       "Colonne",
-      "Fichier Fournisseur",
-      "Fichier SEGUCE RDC",
+      "Fichier Fournisseur",        // MODIFICATION: Label mis à jour
+      "Fichier SEGUCE RDC",         // MODIFICATION: Label mis à jour
       "Différence",
       "Différence %",
     ],

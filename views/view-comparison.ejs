@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <%- include('partials/header') %>
+    <title><%= title %></title>
+</head>
+<body>
+    <div class="container">
+        <header class="my-4">
+            <h1><%= title %></h1>
+            <a href="/history/<%= sessionId %>" class="btn btn-secondary mb-3">
+                <i class="bi bi-arrow-left me-2"></i>Retour à la session
+            </a>
+        </header>
+
+        <div class="card shadow mb-4">
+            <div class="card-header bg-info text-white">
+                <h4 class="card-title mb-0">Informations générales</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Date de comparaison:</strong> <%= new Date(comparisonData.createdAt).toLocaleString() %></p>
+                        <p><strong>Version:</strong> v<%= comparisonData.version %></p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Fichier Fournisseur:</strong> <%= files.fileA %></p>
+                        <p><strong>Fichier SEGUCE RDC:</strong> <%= files.fileB %></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow mb-4">
+            <div class="card-header bg-primary text-white">
+                <h4 class="card-title mb-0">Résumé des différences</h4>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-<%= comparisonData.totalDifferences > 0 ? 'danger' : 'success' %>">
+                    <i class="bi bi-<%= comparisonData.totalDifferences > 0 ? 'exclamation-triangle' : 'check-circle' %> me-2"></i>
+                    <strong><%= comparisonData.totalDifferences %> différence(s) trouvée(s)</strong>
+                </div>
+
+                <% if (comparisonData.columnDifferences && comparisonData.columnDifferences.length > 0) { %>
+                    <h5 class="mt-4">Différences par colonne</h5>
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Colonne</th>
+                                <th>Nombre de différences</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% comparisonData.columnDifferences.forEach(colDiff => { %>
+                                <tr>
+                                    <td><%= colDiff.column %></td>
+                                    <td><span class="badge bg-danger"><%= colDiff.count %></span></td>
+                                </tr>
+                            <% }); %>
+                        </tbody>
+                    </table>
+                <% } %>
+            </div>
+        </div>
+
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h4 class="card-title mb-0">Détails des différences</h4>
+            </div>
+            <div class="card-body">
+                <% if (comparisonData.details && comparisonData.details.length > 0) { %>
+                    <div class="accordion" id="differencesAccordion">
+                        <% comparisonData.details.forEach((detail, index) => { %>
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="heading<%= index %>">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse<%= index %>" aria-expanded="false" aria-controls="collapse<%= index %>">
+                                        <div class="d-flex justify-content-between w-100">
+                                            <span>
+                                                <% if (detail.onlyInFileA) { %>
+                                                    <span class="badge bg-warning me-2">Uniquement dans Fichier Fournisseur</span>
+                                                <% } else if (detail.onlyInFileB) { %>
+                                                    <span class="badge bg-info me-2">Uniquement dans Fichier SEGUCE RDC</span>
+                                                <% } else { %>
+                                                    <span class="badge bg-danger me-2"><%= detail.differences ? detail.differences.length : 0 %> différence(s)</span>
+                                                <% } %>
+                                                <strong>Matricule: <%= detail.id %></strong>
+                                            </span>
+                                        </div>
+                                    </button>
+                                </h2>
+                                <div id="collapse<%= index %>" class="accordion-collapse collapse" aria-labelledby="heading<%= index %>" data-bs-parent="#differencesAccordion">
+                                    <div class="accordion-body">
+                                        <% if (detail.onlyInFileA) { %>
+                                            <div class="alert alert-warning">
+                                                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                                <strong>Cette entrée existe uniquement dans le Fichier Fournisseur</strong>
+                                            </div>
+                                        <% } else if (detail.onlyInFileB) { %>
+                                            <div class="alert alert-info">
+                                                <i class="bi bi-info-circle-fill me-2"></i>
+                                                <strong>Cette entrée existe uniquement dans le Fichier SEGUCE RDC</strong>
+                                            </div>
+                                        <% } %>
+                                        
+                                        <% if (detail.onlyInFileA || detail.onlyInFileB) { %>
+                                            <div class="table-responsive">
+                                                <table class="table table-sm table-bordered">
+                                                    <thead class="table-light">
+                                                        <tr>
+                                                            <th>Colonne</th>
+                                                            <th>Valeur</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <% Object.entries(detail.rowData).forEach(([key, value]) => { %>
+                                                            <tr>
+                                                                <td><strong><%= key %></strong></td>
+                                                                <td><%= value %></td>
+                                                            </tr>
+                                                        <% }); %>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        <% } else if (detail.differences && detail.differences.length > 0) { %>
+                                            <div class="table-responsive">
+                                                <table class="table table-striped table-hover">
+                                                    <thead class="table-dark">
+                                                        <tr>
+                                                            <th>Colonne</th>
+                                                            <th>Fichier Fournisseur</th>
+                                                            <th>Fichier SEGUCE RDC</th>
+                                                            <th>Différence</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <% detail.differences.forEach(diff => { %>
+                                                            <tr>
+                                                                <td><strong><%= diff.column %></strong></td>
+                                                                <td><%= diff.valueA %></td>
+                                                                <td><%= diff.valueB %></td>
+                                                                <td>
+                                                                    <% if (typeof diff.difference === 'number') { %>
+                                                                        <span class="text-<%= diff.difference > 0 ? 'success' : 'danger' %>">
+                                                                            <%= diff.difference > 0 ? '+' : '' %><%= diff.difference %>
+                                                                        </span>
+                                                                    <% } else { %>
+                                                                        <%= diff.difference %>
+                                                                    <% } %>
+                                                                </td>
+                                                            </tr>
+                                                        <% }); %>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        <% } %>
+                                    </div>
+                                </div>
+                            </div>
+                        <% }); %>
+                    </div>
+                <% } else { %>
+                    <div class="alert alert-success">
+                        <i class="bi bi-check-circle-fill me-2"></i>
+                        Aucune différence n'a été détectée entre les fichiers.
+                    </div>
+                <% } %>
+            </div>
+        </div>
+    </div>
+
+    <%- include('partials/footer') %>
+</body>
+</html>

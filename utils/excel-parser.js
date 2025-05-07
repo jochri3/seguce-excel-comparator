@@ -59,28 +59,44 @@ const parseExcelFile = (filePath) => {
       headers.push(cell ? cell.v : `Col${c}`);
     }
 
-    // Parcourir toutes les cellules pour trouver les formules
+    // MODIFICATION: Extraction des données complètes à partir de la ligne après l'en-tête
     for (let r = headerRow + 1; r <= range.e.r; r++) {
+      const row = {};
       const rowFormulas = {};
       let hasFormulas = false;
 
       for (let c = range.s.c; c <= range.e.c; c++) {
         const cellAddress = XLSX.utils.encode_cell({ r, c });
         const cell = worksheet[cellAddress];
-
-        if (cell && cell.f) {
-          const header = headers[c - range.s.c];
-          if (header) {
-            rowFormulas[header] = cell.f;
-            hasFormulas = true;
+        const headerIndex = c - range.s.c;
+        
+        if (headerIndex >= 0 && headerIndex < headers.length) {
+          const header = headers[headerIndex];
+          
+          // Stocker la valeur de la cellule
+          if (cell) {
+            row[header] = cell.v;
+            
+            // Stocker également la formule si elle existe
+            if (cell.f) {
+              rowFormulas[header] = cell.f;
+              hasFormulas = true;
+            }
+          } else {
+            row[header] = null;
           }
         }
       }
 
+      // Ajouter la ligne aux données
+      data.push(row);
+      
+      // Stocker les formules pour cette ligne si nécessaire
       if (hasFormulas) {
         formulas[r - headerRow - 1] = rowFormulas;
       }
     }
+
     return {
       sheetName: sheetNames[0],
       headers: headers.map((h) => ({ key: h, value: h })),
@@ -179,6 +195,7 @@ const classifyColumns = (columns) => {
  * @returns {Object} - Résultats de la comparaison
  */
 const compareExcelData = (fileAData, fileBData) => {
+  // MODIFICATION: Initialisation complète de la structure de résultat avec sequentialComparison
   const results = {
     summary: {
       totalRows: {
@@ -196,6 +213,18 @@ const compareExcelData = (fileAData, fileBData) => {
         fileA: [],
         fileB: [],
       },
+      sequentialComparison: {
+        fixedElements: {
+          totalColumns: 0,
+          columnsWithErrors: [],
+          totalErrors: 0,
+        },
+        variableElements: {
+          totalColumns: 0,
+          columnsWithErrors: [],
+          totalErrors: 0,
+        },
+      }
     },
     details: [],
     headers: {
@@ -205,7 +234,7 @@ const compareExcelData = (fileAData, fileBData) => {
   };
 
   console.log(
-    `Comparaison: Fichier A a ${fileAData.data.length} lignes, Fichier B a ${fileBData.data.length} lignes`,
+    `Comparaison: Fichier Fournisseur a ${fileAData.data.length} lignes, Fichier SEGUCE RDC a ${fileBData.data.length} lignes`,
   );
 
   // Si un des fichiers est vide, sortir
@@ -238,7 +267,7 @@ const compareExcelData = (fileAData, fileBData) => {
     for (const idCol of possibleIdColumns) {
       if (normalizedName.includes(idCol)) {
         idColumnA = header.key;
-        console.log(`Colonne d'ID trouvée dans A: "${idColumnA}"`);
+        console.log(`Colonne d'ID trouvée dans Fichier Fournisseur: "${idColumnA}"`);
         break;
       }
     }
@@ -251,7 +280,7 @@ const compareExcelData = (fileAData, fileBData) => {
     for (const idCol of possibleIdColumns) {
       if (normalizedName.includes(idCol)) {
         idColumnB = header.key;
-        console.log(`Colonne d'ID trouvée dans B: "${idColumnB}"`);
+        console.log(`Colonne d'ID trouvée dans Fichier SEGUCE RDC: "${idColumnB}"`);
         break;
       }
     }
@@ -262,14 +291,14 @@ const compareExcelData = (fileAData, fileBData) => {
   if (!idColumnA && fileAData.headers.length > 0) {
     idColumnA = fileAData.headers[0].key;
     console.log(
-      `Aucune colonne d'ID trouvée dans A, utilisation de la première colonne: "${idColumnA}"`,
+      `Aucune colonne d'ID trouvée dans Fichier Fournisseur, utilisation de la première colonne: "${idColumnA}"`,
     );
   }
 
   if (!idColumnB && fileBData.headers.length > 0) {
     idColumnB = fileBData.headers[0].key;
     console.log(
-      `Aucune colonne d'ID trouvée dans B, utilisation de la première colonne: "${idColumnB}"`,
+      `Aucune colonne d'ID trouvée dans Fichier SEGUCE RDC, utilisation de la première colonne: "${idColumnB}"`,
     );
   }
 
@@ -327,25 +356,15 @@ const compareExcelData = (fileAData, fileBData) => {
   // Classifier les colonnes
   const { fixedColumns, variableColumns } = classifyColumns(commonColumns);
 
-  // Résultats de comparaison détaillés
-  results.summary.sequentialComparison = {
-    fixedElements: {
-      totalColumns: fixedColumns.length,
-      columnsWithErrors: [],
-      totalErrors: 0,
-    },
-    variableElements: {
-      totalColumns: variableColumns.length,
-      columnsWithErrors: [],
-      totalErrors: 0,
-    },
-  };
+  // Mettre à jour les totaux des colonnes dans sequentialComparison
+  results.summary.sequentialComparison.fixedElements.totalColumns = fixedColumns.length;
+  results.summary.sequentialComparison.variableElements.totalColumns = variableColumns.length;
 
   console.log(`Éléments fixes détectés: ${fixedColumns.length}`);
   console.log(`Éléments variables détectés: ${variableColumns.length}`);
   console.log(`${commonColumns.length} colonnes communes trouvées`);
-  console.log(`${missingInA.length} colonnes présentes uniquement dans B`);
-  console.log(`${missingInB.length} colonnes présentes uniquement dans A`);
+  console.log(`${missingInA.length} colonnes présentes uniquement dans SEGUCE RDC`);
+  console.log(`${missingInB.length} colonnes présentes uniquement dans Fichier Fournisseur`);
 
   // Détection des doublons de matricules
   const detectDuplicates = (data, idColumn, fileLabel) => {

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <%- include('partials/header') %>
+    <title><%= title %></title>
+</head>
+<body>
+    <div class="container">
+        <header class="my-4">
+            <h1><%= title %></h1>
+            <a href="/history/<%= sessionId %>" class="btn btn-secondary mb-3">
+                <i class="bi bi-arrow-left me-2"></i>Retour à la session
+            </a>
+        </header>
+
+        <div class="card shadow mb-4">
+            <div class="card-header bg-<%= fileData.type === 'fileA' ? 'primary' : 'secondary' %> text-white">
+                <h4 class="card-title mb-0">Détails du <%= fileLabel %></h4>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <p><strong>Nom du fichier:</strong> <%= fileData.name %></p>
+                        <p><strong>Version:</strong> v<%= fileData.version %></p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Date d'upload:</strong> <%= new Date(fileData.createdAt).toLocaleString() %></p>
+                        <p><strong>Par:</strong> <%= fileData.createdBy %></p>
+                    </div>
+                </div>
+                
+                <% if (Object.keys(fileData.formulas).length > 0) { %>
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Ce fichier contient des formules Excel qui ont été préservées.
+                    </div>
+                <% } %>
+                
+                <h5 class="mt-4 mb-3">Contenu du fichier</h5>
+                
+                <% if (fileData.data && fileData.data.length > 0) { %>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <% if (fileData.data[0]) { %>
+                                        <% Object.keys(fileData.data[0]).forEach(column => { %>
+                                            <th><%= column %></th>
+                                        <% }); %>
+                                    <% } %>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% fileData.data.slice(0, 100).forEach(row => { %>
+                                    <tr>
+                                        <% Object.keys(row).forEach(column => { %>
+                                            <td><%= row[column] %></td>
+                                        <% }); %>
+                                    </tr>
+                                <% }); %>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <% if (fileData.data.length > 100) { %>
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            Affichage limité aux 100 premières lignes. Le fichier contient un total de <%= fileData.data.length %> lignes.
+                        </div>
+                    <% } %>
+                <% } else { %>
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        Aucune donnée disponible dans ce fichier.
+                    </div>
+                <% } %>
+            </div>
+        </div>
+        
+        <% if (Object.keys(fileData.formulas).length > 0) { %>
+            <div class="card shadow">
+                <div class="card-header bg-info text-white">
+                    <h4 class="card-title mb-0">Formules Excel détectées</h4>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Ligne</th>
+                                    <th>Colonne</th>
+                                    <th>Formule</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% Object.entries(fileData.formulas).forEach(([rowIndex, rowFormulas]) => { %>
+                                    <% Object.entries(rowFormulas).forEach(([column, formula]) => { %>
+                                        <tr>
+                                            <td><%= parseInt(rowIndex) + 1 %></td>
+                                            <td><%= column %></td>
+                                            <td><code><%= formula %></code></td>
+                                        </tr>
+                                    <% }); %>
+                                <% }); %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        <% } %>
+    </div>
+
+    <%- include('partials/footer') %>
+</body>
+</html>

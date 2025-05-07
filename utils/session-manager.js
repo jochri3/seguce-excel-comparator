@@ -154,6 +154,24 @@ class SessionManager {
       );
     });
   }
+
+  static async getComparisonResults(sessionId) {
+    const db = await getDatabase();
+
+    return new Promise((resolve, reject) => {
+      const sql = `
+      SELECT *
+      FROM comparison_results
+      WHERE session_id = ?
+      ORDER BY version DESC, created_at DESC
+    `;
+
+      db.all(sql, [sessionId], (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows);
+      });
+    });
+  }
 }
 
 module.exports = SessionManager;

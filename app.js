@@ -68,7 +68,6 @@ app.get("/", (req, res) => {
 });
 
 // Route pour traiter l'upload des deux fichiers Excel
-// Route pour traiter l'upload des deux fichiers Excel
 app.post(
   "/compare",
   upload.fields([
@@ -276,6 +275,7 @@ app.get("/history/:sessionId", async (req, res) => {
   try {
     const sessionId = req.params.sessionId;
     const history = await SessionManager.getSessionHistory(sessionId);
+    const comparisonResults = await SessionManager.getComparisonResults(sessionId);
 
     const groupedFiles = {
       fileA: [],
@@ -290,6 +290,7 @@ app.get("/history/:sessionId", async (req, res) => {
       title: `Historique - ${sessionId}`,
       sessionId,
       groupedFiles,
+      comparisonResults
     });
   } catch (error) {
     console.error(
@@ -972,6 +973,261 @@ app.get("/lexique/export", async (req, res) => {
     res.status(500).render("error", {
       title: "Erreur",
       message: "Erreur de base de données",
+    });
+  }
+});
+
+// Routes pour la visualisation et comparaison de versions (à ajouter à la fin du fichier app.js, avant la section gestion des erreurs)
+
+// Route pour voir les détails d'un fichier spécifique
+app.get("/history/view-file/:sessionId/:fileType/:version", async (req, res) => {
+  try {
+    const { sessionId, fileType, version } = req.params;
+    
+    // Récupérer les données du fichier depuis la base de données
+    const db = await getDatabase();
+    const fileData = await new Promise((resolve, reject) => {
+      db.get(
+        "SELECT * FROM file_versions WHERE session_id = ? AND file_type = ? AND version = ?",
+        [sessionId, fileType, version],
+        (err, row) => {
+          if (err) reject(err);
+          else resolve(row);
+        }
+      );
+    });
+    
+    if (!fileData) {
+      return res.status(404).render("error", {
+        title: "Fichier non trouvé",
+        message: "Le fichier demandé n'existe pas"
+      });
+    }
+    
+    // Convertir les données JSON en objet
+    const data = JSON.parse(fileData.data);
+    const formulas = JSON.parse(fileData.formulas || "{}");
+    
+    // Déterminer le label du fichier
+    const fileLabel = fileType === "fileA" ? "Fichier Fournisseur" : "Fichier SEGUCE RDC";
+    
+    res.render("view-file", {
+      title: `${fileLabel} (v${version})`,
+      fileData: {
+        name: fileData.file_name,
+        type: fileType,
+        version: version,
+        createdAt: fileData.created_at,
+        createdBy: fileData.created_by,
+        data: data,
+        formulas: formulas
+      },
+      sessionId,
+      fileLabel
+    });
+  } catch (error) {
+    console.error("Erreur lors de la récupération des données du fichier:", error);
+    res.status(500).render("error", {
+      title: "Erreur",
+      message: "Erreur lors de la récupération des données du fichier"
+    });
+  }
+});
+
+// Route pour voir les détails d'une comparaison
+app.get("/history/view-comparison/:sessionId/:version", async (req, res) => {
+  try {
+    const { sessionId, version } = req.params;
+    
+    // Récupérer les résultats de comparaison
+    const db = await getDatabase();
+    const comparisonData = await new Promise((resolve, reject) => {
+      db.get(
+        "SELECT * FROM comparison_results WHERE session_id = ? AND version = ?",
+        [sessionId, version],
+        (err, row) => {
+          if (err) reject(err);
+          else resolve(row);
+        }
+      );
+    });
+    
+    if (!comparisonData) {
+      return res.status(404).render("error", {
+        title: "Résultats non trouvés",
+        message: "Les résultats de comparaison demandés n'existent pas"
+      });
+    }
+    
+    // Récupérer les informations sur les fichiers utilisés
+    const filesData = await new Promise((resolve, reject) => {
+      db.all(
+        "SELECT * FROM file_versions WHERE session_id = ? AND version <= ?",
+        [sessionId, version],
+        (err, rows) => {
+          if (err) reject(err);
+          else resolve(rows);
+        }
+      );
+    });
+    
+    // Déterminer les fichiers utilisés dans cette comparaison
+    const fileA = filesData.find(f => f.file_type === "fileA" && f.version <= version);
+    const fileB = filesData.find(f => f.file_type === "fileB" && f.version <= version);
+    
+    // Convertir les données JSON en objets
+    const details = JSON.parse(comparisonData.details);
+    const columnDifferences = JSON.parse(comparisonData.column_differences);
+    
+    res.render("view-comparison", {
+      title: `Résultats de comparaison - ${sessionId} (v${version})`,
+      comparisonData: {
+        version: version,
+        totalDifferences: comparisonData.total_differences,
+        columnDifferences: columnDifferences,
+        details: details,
+        createdAt: comparisonData.created_at
+      },
+      files: {
+        fileA: fileA ? fileA.file_name : "Non disponible",
+        fileB: fileB ? fileB.file_name : "Non disponible"
+      },
+      sessionId
+    });
+  } catch (error) {
+    console.error("Erreur lors de la récupération des résultats de comparaison:", error);
+    res.status(500).render("error", {
+      title: "Erreur",
+      message: "Erreur lors de la récupération des résultats de comparaison"
+    });
+  }
+});
+
+// Route pour comparer deux versions d'un même type de fichier
+app.get("/history/compare-versions/:sessionId/:fileType/:version1/:version2", async (req, res) => {
+  try {
+    const { sessionId, fileType, version1, version2 } = req.params;
+    
+    // Récupérer les deux versions du fichier
+    const db = await getDatabase();
+    const [file1, file2] = await Promise.all([
+      new Promise((resolve, reject) => {
+        db.get(
+          "SELECT * FROM file_versions WHERE session_id = ? AND file_type = ? AND version = ?",
+          [sessionId, fileType, version1],
+          (err, row) => {
+            if (err) reject(err);
+            else resolve(row);
+          }
+        );
+      }),
+      new Promise((resolve, reject) => {
+        db.get(
+          "SELECT * FROM file_versions WHERE session_id = ? AND file_type = ? AND version = ?",
+          [sessionId, fileType, version2],
+          (err, row) => {
+            if (err) reject(err);
+            else resolve(row);
+          }
+        );
+      })
+    ]);
+    
+    if (!file1 || !file2) {
+      return res.status(404).render("error", {
+        title: "Fichiers non trouvés",
+        message: "Une ou plusieurs versions demandées n'existent pas"
+      });
+    }
+    
+    // Convertir les données JSON en objets
+    const data1 = JSON.parse(file1.data);
+    const data2 = JSON.parse(file2.data);
+    
+    // Comparer les deux versions (implémentation simplifiée)
+    const differences = [];
+    const allMatricules = new Set([...data1.map(r => r.Matricule), ...data2.map(r => r.Matricule)]);
+    
+    allMatricules.forEach(matricule => {
+      const row1 = data1.find(r => r.Matricule === matricule);
+      const row2 = data2.find(r => r.Matricule === matricule);
+      
+      if (!row1) {
+        differences.push({
+          matricule,
+          type: 'added',
+          message: `Matricule ajouté dans la version ${version2}`
+        });
+      } else if (!row2) {
+        differences.push({
+          matricule,
+          type: 'removed',
+          message: `Matricule supprimé dans la version ${version2}`
+        });
+      } else {
+        // Comparer les valeurs des colonnes
+        const columnDiffs = [];
+        Object.keys(row2).forEach(key => {
+          if (row1[key] !== row2[key]) {
+            columnDiffs.push({
+              column: key,
+              oldValue: row1[key],
+              newValue: row2[key]
+            });
+          }
+        });
+        
+        if (columnDiffs.length > 0) {
+          differences.push({
+            matricule,
+            type: 'modified',
+            changes: columnDiffs
+          });
+        }
+      }
+    });
+    
+    // Déterminer le label du fichier
+    const fileLabel = fileType === "fileA" ? "Fichier Fournisseur" : "Fichier SEGUCE RDC";
+    
+    res.render("compare-versions", {
+      title: `Comparaison de versions - ${fileLabel}`,
+      file1: {
+        name: file1.file_name,
+        version: version1,
+        createdAt: file1.created_at
+      },
+      file2: {
+        name: file2.file_name,
+        version: version2,
+        createdAt: file2.created_at
+      },
+      differences,
+      fileLabel,
+      sessionId
+    });
+  } catch (error) {
+    console.error("Erreur lors de la comparaison des versions:", error);
+    res.status(500).render("error", {
+      title: "Erreur",
+      message: "Erreur lors de la comparaison des versions"
+    });
+  }
+});
+
+// Route pour comparer des versions personnalisées
+app.get("/history/compare-custom/:sessionId", async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { fileA_version, fileB_version } = req.query;
+    
+    // Rediriger vers la route de comparaison standard
+    res.redirect(`/compare/${sessionId}/${fileA_version}/${fileB_version}`);
+  } catch (error) {
+    console.error("Erreur lors de la comparaison personnalisée:", error);
+    res.status(500).render("error", {
+      title: "Erreur",
+      message: "Erreur lors de la comparaison personnalisée"
     });
   }
 });
