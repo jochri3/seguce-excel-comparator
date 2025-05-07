@@ -176,6 +176,60 @@ const exportToExcelWithFormulas = (
     XLSX.utils.book_append_sheet(workbook, duplicatesSheet, "Doublons");
   }
 
+  // Créer une feuille pour les écarts significatifs
+  const significantDifferencesData = [
+    ["Écarts significatifs"],
+    [],
+    [
+      "Matricule",
+      "Colonne",
+      "Fichier Fournisseur",
+      "Fichier SEGUCE RDC",
+      "Différence",
+      "Différence %",
+    ],
+  ];
+
+  // Identifier les écarts significatifs (différence > 5% ou valeur absolue > 100)
+  let significantDiffsFound = false;
+  comparisonResult.details.forEach((detail) => {
+    if (detail.differences) {
+      detail.differences.forEach((diff) => {
+        if (
+          typeof diff.valueA === "number" &&
+          typeof diff.valueB === "number"
+        ) {
+          const absDiff = Math.abs(diff.valueB - diff.valueA);
+          const percentDiff =
+            diff.valueA !== 0 ? (absDiff / Math.abs(diff.valueA)) * 100 : 100;
+
+          if (percentDiff > 5 || absDiff > 100) {
+            significantDiffsFound = true;
+            significantDifferencesData.push([
+              detail.id,
+              diff.column,
+              diff.valueA,
+              diff.valueB,
+              diff.valueB - diff.valueA,
+              `${percentDiff.toFixed(2)}%`,
+            ]);
+          }
+        }
+      });
+    }
+  });
+
+  if (significantDiffsFound) {
+    const significantDiffsSheet = XLSX.utils.aoa_to_sheet(
+      significantDifferencesData,
+    );
+    XLSX.utils.book_append_sheet(
+      workbook,
+      significantDiffsSheet,
+      "Écarts significatifs",
+    );
+  }
+
   // Convertir le classeur en buffer
   const excelBuffer = XLSX.write(workbook, {
     type: "buffer",
@@ -196,44 +250,20 @@ const createSheetWithFormulas = (fileData, sheetName) => {
     // Préparer les données
     const rows = [headers];
 
-    fileData.data.forEach((row, idx) => {
+    fileData.data.forEach((row) => {
       const rowData = [];
 
       headers.forEach((header) => {
-        rowData.push(row[header] || "");
+        rowData.push(row[header] !== undefined ? row[header] : "");
       });
 
       rows.push(rowData);
-
-      // Vérifier s'il y a des formules pour cette ligne
-      if (fileData.formulas && fileData.formulas[idx]) {
-        const formulaRow = fileData.formulas[idx];
-
-        // Appliquer les formules
-        Object.entries(formulaRow).forEach(([col, formula]) => {
-          const colIndex = headers.indexOf(col);
-          if (colIndex !== -1) {
-            // Définir la cellule avec la formule
-            const r = idx + 1; // +1 pour l'en-tête
-            const c = colIndex;
-
-            // XLSX.utils.encode_cell convertit les indices de ligne/colonne en adresse de cellule
-            const cellRef = XLSX.utils.encode_cell({ r: r + 1, c: c }); // +1 car les lignes commencent à 0 dans XLSX
-
-            // Formater la référence de cellule pour la formule
-            if (!formulaRow._sheet) {
-              // Si on n'a pas de référence explicite, on utilise la formule telle quelle
-              rows[r + 1][c] = { f: formula };
-            }
-          }
-        });
-      }
     });
 
     // Créer la feuille à partir des données
     const sheet = XLSX.utils.aoa_to_sheet(rows);
 
-    // Parcourir les formules et les appliquer
+    // Appliquer les formules après la création de la feuille
     if (fileData.formulas) {
       Object.entries(fileData.formulas).forEach(([rowIdx, formulas]) => {
         const rowIndex = parseInt(rowIdx) + 1; // +1 pour l'en-tête
@@ -241,21 +271,25 @@ const createSheetWithFormulas = (fileData, sheetName) => {
         Object.entries(formulas).forEach(([col, formula]) => {
           const colIndex = headers.indexOf(col);
           if (colIndex !== -1) {
-            // Récupérer la référence de cellule
             const cellRef = XLSX.utils.encode_cell({
               r: rowIndex,
               c: colIndex,
             });
 
-            // Définir la formule
+            // Créer la cellule si elle n'existe pas
             if (!sheet[cellRef]) {
-              sheet[cellRef] = {};
+              sheet[cellRef] = { t: "n", v: 0 };
             }
+
+            // Définir la formule
             sheet[cellRef].f = formula;
           }
         });
       });
     }
+
+    // Ajouter des styles à la feuille
+    addStylingToSheet(sheet);
 
     return sheet;
   } catch (error) {
@@ -263,7 +297,7 @@ const createSheetWithFormulas = (fileData, sheetName) => {
       "Erreur lors de la création de la feuille avec formules:",
       error,
     );
-    // En cas d'erreur, créer une feuille simple sans formules
+    // Fallback: créer une feuille simple sans formules
     const data = [fileData.headers.map((h) => h.key)];
     fileData.data.forEach((row) => {
       const rowData = fileData.headers.map((h) => row[h.key] || "");
@@ -271,6 +305,25 @@ const createSheetWithFormulas = (fileData, sheetName) => {
     });
     return XLSX.utils.aoa_to_sheet(data);
   }
+};
+
+/**
+ * Ajoute du style à une feuille Excel
+ */
+const addStylingToSheet = (sheet) => {
+  // Obtenir la plage de la feuille
+  const range = XLSX.utils.decode_range(sheet["!ref"]);
+
+  // Définir les largeurs de colonnes optimales
+  const colWidths = [];
+  for (let c = range.s.c; c <= range.e.c; c++) {
+    colWidths.push({ wch: 15 }); // Largeur par défaut
+  }
+
+  // Appliquer les largeurs
+  sheet["!cols"] = colWidths;
+
+  return sheet;
 };
 
 // Exporter les fonctions

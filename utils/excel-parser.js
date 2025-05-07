@@ -59,37 +59,28 @@ const parseExcelFile = (filePath) => {
       headers.push(cell ? cell.v : `Col${c}`);
     }
 
-    // Extraire les données et formules
+    // Parcourir toutes les cellules pour trouver les formules
     for (let r = headerRow + 1; r <= range.e.r; r++) {
-      const rowData = {};
       const rowFormulas = {};
-      let hasData = false;
+      let hasFormulas = false;
 
       for (let c = range.s.c; c <= range.e.c; c++) {
         const cellAddress = XLSX.utils.encode_cell({ r, c });
         const cell = worksheet[cellAddress];
-        const header = headers[c - range.s.c];
 
-        if (cell) {
-          // Extraire la valeur
-          rowData[header] = cell.v;
-          hasData = true;
-
-          // Extraire la formule si elle existe
-          if (cell.f) {
+        if (cell && cell.f) {
+          const header = headers[c - range.s.c];
+          if (header) {
             rowFormulas[header] = cell.f;
+            hasFormulas = true;
           }
         }
       }
 
-      if (hasData) {
-        data.push(rowData);
-        if (Object.keys(rowFormulas).length > 0) {
-          formulas[r - headerRow - 1] = rowFormulas;
-        }
+      if (hasFormulas) {
+        formulas[r - headerRow - 1] = rowFormulas;
       }
     }
-
     return {
       sheetName: sheetNames[0],
       headers: headers.map((h) => ({ key: h, value: h })),

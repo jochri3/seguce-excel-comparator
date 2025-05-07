@@ -6,7 +6,6 @@
   "scripts": {
     "start": "node app.js",
     "dev": "nodemon app.js",
-    "lint": "prettier --plugin=prettier-plugin-ejs --write views/**/*.ejs",
     "init-db": "node scripts/init-db.js"
   },
   "keywords": [
@@ -29,8 +28,6 @@
   },
   "devDependencies": {
     "ejs-lint": "^2.0.1",
-    "nodemon": "^3.0.1",
-    "prettier": "^3.5.3",
-    "prettier-plugin-ejs": "^1.0.3"
+    "nodemon": "^3.0.1"
   }
 }
