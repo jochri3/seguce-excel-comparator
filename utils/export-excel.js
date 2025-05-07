@@ -3,8 +3,11 @@ const XLSX = require("xlsx");
 /**
  * Convertit les différences en feuille Excel avec formules
  * @param {Object} comparisonResult - Résultats de la comparaison
- * @param {Object} fileAData - Données brutes du fichier A
- * @param {Object} fileBData - Données brutes du fichier B
+ * @param {Object} fileAData - Données brutes du fichier Fournisseur
+ * @param {Object} fileBData - Données brutes du fichier SEGUCE
+ * @param {string} fileAName - Nom du fichier Fournisseur
+ * @param {string} fileBName - Nom du fichier SEGUCE
+ * @param {Array} lexiqueItems - Données du lexique (optionnel)
  * @returns {Buffer} - Buffer Excel contenant le rapport
  */
 const exportToExcelWithFormulas = (
@@ -13,7 +16,7 @@ const exportToExcelWithFormulas = (
   fileBData,
   fileAName,
   fileBName,
-  lexiqueItems
+  lexiqueItems = []
 ) => {
   const workbook = XLSX.utils.book_new();
 
@@ -21,10 +24,15 @@ const exportToExcelWithFormulas = (
   const summaryData = [
     ["Réconciliation - Résumé"],
     [],
-    ["Fichier Fournisseur", fileAName], // MODIFICATION: Changé de "Fichier A" à "Fichier Fournisseur"
-    ["Fichier SEGUCE RDC", fileBName], // MODIFICATION: Changé de "Fichier B" à "Fichier SEGUCE RDC"
+    ["Fichier prestataire paie", fileAName],
+    ["Fichier SEGUCE", fileBName],
     [],
-    ["Statistiques", "Fichier Fournisseur", "Fichier SEGUCE RDC", "Différence"], // MODIFICATION: Labels mis à jour
+    [
+      "Statistiques",
+      "Fichier prestataire paie",
+      "Fichier SEGUCE",
+      "Différence",
+    ],
     [
       "Nombre de lignes",
       comparisonResult.summary.totalRows.fileA,
@@ -42,9 +50,11 @@ const exportToExcelWithFormulas = (
 
   // Ajouter les différences par colonne
   if (comparisonResult.summary.columnDifferences) {
-    comparisonResult.summary.columnDifferences.forEach((colDiff) => {
-      summaryData.push([colDiff.column, colDiff.count]);
-    });
+    comparisonResult.summary.columnDifferences
+      .filter((colDiff) => !colDiff.column.startsWith("Col")) // Filtrer les colonnes génériques
+      .forEach((colDiff) => {
+        summaryData.push([colDiff.column, colDiff.count]);
+      });
   }
 
   // Ajouter des informations sur les doublons
@@ -57,7 +67,7 @@ const exportToExcelWithFormulas = (
       comparisonResult.summary.duplicates.fileA.length > 0
     ) {
       summaryData.push([
-        "Doublons Fichier Fournisseur", // MODIFICATION: Label mis à jour
+        "Doublons Fichier prestataire paie",
         comparisonResult.summary.duplicates.fileA.length,
       ]);
     }
@@ -67,7 +77,7 @@ const exportToExcelWithFormulas = (
       comparisonResult.summary.duplicates.fileB.length > 0
     ) {
       summaryData.push([
-        "Doublons Fichier SEGUCE RDC", // MODIFICATION: Label mis à jour
+        "Doublons Fichier SEGUCE",
         comparisonResult.summary.duplicates.fileB.length,
       ]);
     }
@@ -109,10 +119,10 @@ const exportToExcelWithFormulas = (
     [
       "ID",
       "Colonne",
-      "Valeur Fichier Fournisseur",
-      "Valeur Fichier SEGUCE RDC",
+      "Valeur Fichier prestataire paie",
+      "Valeur Fichier SEGUCE",
       "Différence",
-    ], // MODIFICATION: Labels mis à jour
+    ],
   ];
 
   // Ajouter les détails des différences
@@ -139,17 +149,14 @@ const exportToExcelWithFormulas = (
   XLSX.utils.book_append_sheet(workbook, detailsSheet, "Détails");
 
   // Feuille 3: Données Fournisseur avec formules
-  const sheetA = createSheetWithFormulas(fileAData, "Données Fournisseur"); // MODIFICATION: Nom feuille mis à jour
-  XLSX.utils.book_append_sheet(workbook, sheetA, "Données Fournisseur"); // MODIFICATION: Nom feuille mis à jour
+  const sheetA = createSheetWithFormulas(fileAData, "Données Fournisseur");
+  XLSX.utils.book_append_sheet(workbook, sheetA, "Données Fournisseur");
 
   // Feuille 4: Données SEGUCE avec formules
-  const sheetB = createSheetWithFormulas(fileBData, "Données SEGUCE"); // MODIFICATION: Nom feuille mis à jour
-  XLSX.utils.book_append_sheet(workbook, sheetB, "Données SEGUCE"); // MODIFICATION: Nom feuille mis à jour
+  const sheetB = createSheetWithFormulas(fileBData, "Données SEGUCE");
+  XLSX.utils.book_append_sheet(workbook, sheetB, "Données SEGUCE");
 
-  // Feuille 5: Synthèse des totaux (la même que dans l'export actuel)
-  // ... (code existant pour la feuille de synthèse des totaux)
-
-  // Feuille 6: Synthèse des doublons (nouvelle)
+  // Feuille 5: Synthèse des doublons (nouvelle)
   if (comparisonResult.summary.duplicates) {
     const duplicatesData = [["Synthèse des doublons détectés"], []];
 
@@ -157,7 +164,7 @@ const exportToExcelWithFormulas = (
       comparisonResult.summary.duplicates.fileA &&
       comparisonResult.summary.duplicates.fileA.length > 0
     ) {
-      duplicatesData.push(["Doublons dans le Fichier Fournisseur"]); // MODIFICATION: Label mis à jour
+      duplicatesData.push(["Doublons dans le Fichier prestataire paie"]);
       duplicatesData.push(["Matricule", "Occurrences", "Lignes"]);
 
       comparisonResult.summary.duplicates.fileA.forEach((dup) => {
@@ -171,7 +178,7 @@ const exportToExcelWithFormulas = (
       comparisonResult.summary.duplicates.fileB &&
       comparisonResult.summary.duplicates.fileB.length > 0
     ) {
-      duplicatesData.push(["Doublons dans le Fichier SEGUCE RDC"]); // MODIFICATION: Label mis à jour
+      duplicatesData.push(["Doublons dans le Fichier SEGUCE"]);
       duplicatesData.push(["Matricule", "Occurrences", "Lignes"]);
 
       comparisonResult.summary.duplicates.fileB.forEach((dup) => {
@@ -183,15 +190,15 @@ const exportToExcelWithFormulas = (
     XLSX.utils.book_append_sheet(workbook, duplicatesSheet, "Doublons");
   }
 
-  // Créer une feuille pour les écarts significatifs
+  // Feuille 6: Écarts significatifs
   const significantDifferencesData = [
     ["Écarts significatifs"],
     [],
     [
       "Matricule",
       "Colonne",
-      "Fichier Fournisseur", // MODIFICATION: Label mis à jour
-      "Fichier SEGUCE RDC", // MODIFICATION: Label mis à jour
+      "Fichier prestataire paie",
+      "Fichier SEGUCE",
       "Différence",
       "Différence %",
     ],
@@ -237,8 +244,7 @@ const exportToExcelWithFormulas = (
     );
   }
 
-
-  // Feuille: Synthèse des écarts variables
+  // Feuille 7: Synthèse des écarts variables
   const variableElementsData = [
     ["Écarts des données variables"],
     [],
@@ -282,62 +288,6 @@ const exportToExcelWithFormulas = (
     "Prime Imposable Variable",
   ];
 
-  // Extraire les écarts pour chaque élément variable
-  let variableDiffsFound = false;
-  variableElements.forEach((element) => {
-    let totalA = 0;
-    let totalB = 0;
-
-    // Chercher parmi les détails
-    comparisonResult.details.forEach((detail) => {
-      if (detail.differences) {
-        detail.differences.forEach((diff) => {
-          if (diff.column === element) {
-            if (typeof diff.valueA === "number") totalA += diff.valueA;
-            if (typeof diff.valueB === "number") totalB += diff.valueB;
-            variableDiffsFound = true;
-          }
-        });
-      }
-    });
-
-    if (totalA !== 0 || totalB !== 0) {
-      const difference = totalB - totalA;
-      const percentDiff =
-        totalA !== 0 ? (Math.abs(difference) / Math.abs(totalA)) * 100 : 100;
-
-      variableElementsData.push([
-        element,
-        totalA,
-        totalB,
-        difference,
-        `${percentDiff.toFixed(2)}%`,
-      ]);
-    }
-  });
-
-  if (variableDiffsFound) {
-    const variableElementsSheet = XLSX.utils.aoa_to_sheet(variableElementsData);
-    XLSX.utils.book_append_sheet(
-      workbook,
-      variableElementsSheet,
-      "Écarts Variables"
-    );
-  }
-
-  // Feuille: Synthèse des écarts fixes
-  const fixedElementsData = [
-    ["Écarts des données fixes"],
-    [],
-    [
-      "Rubrique",
-      "Fichier prestataire paie",
-      "Fichier SEGUCE",
-      "Différence",
-      "Différence %",
-    ],
-  ];
-
   // Liste des éléments fixes
   const fixedElements = [
     "Matricule",
@@ -356,46 +306,160 @@ const exportToExcelWithFormulas = (
     "Prime Imposable Fixe",
   ];
 
-  // Extraire les écarts pour chaque élément fixe
-  let fixedDiffsFound = false;
-  fixedElements.forEach((element) => {
-    let totalA = 0;
-    let totalB = 0;
+  // Collecter les différences par colonne pour les éléments variables
+  const variableDiffs = {};
+  let variableDiffsFound = false;
 
-    // Chercher parmi les détails
-    comparisonResult.details.forEach((detail) => {
-      if (detail.differences) {
-        detail.differences.forEach((diff) => {
-          if (diff.column === element) {
-            if (typeof diff.valueA === "number") totalA += diff.valueA;
-            if (typeof diff.valueB === "number") totalB += diff.valueB;
-            fixedDiffsFound = true;
+  comparisonResult.details.forEach((detail) => {
+    if (detail.differences) {
+      detail.differences.forEach((diff) => {
+        const columnLower = diff.column.toLowerCase();
+
+        // Vérifier si la colonne est dans les éléments variables
+        const isVariable =
+          variableElements.some((varElement) =>
+            columnLower.includes(varElement.toLowerCase())
+          ) ||
+          !fixedElements.some((fixedElement) =>
+            columnLower.includes(fixedElement.toLowerCase())
+          );
+
+        if (isVariable && !columnLower.startsWith("col")) {
+          // Ignorer les colonnes génériques
+          if (!variableDiffs[diff.column]) {
+            variableDiffs[diff.column] = {
+              totalA: 0,
+              totalB: 0,
+              count: 0,
+            };
           }
-        });
-      }
-    });
 
-    if (totalA !== 0 || totalB !== 0) {
-      const difference = totalB - totalA;
-      const percentDiff =
-        totalA !== 0 ? (Math.abs(difference) / Math.abs(totalA)) * 100 : 100;
-
-      fixedElementsData.push([
-        element,
-        totalA,
-        totalB,
-        difference,
-        `${percentDiff.toFixed(2)}%`,
-      ]);
+          if (typeof diff.valueA === "number")
+            variableDiffs[diff.column].totalA += diff.valueA;
+          if (typeof diff.valueB === "number")
+            variableDiffs[diff.column].totalB += diff.valueB;
+          variableDiffs[diff.column].count++;
+          variableDiffsFound = true;
+        }
+      });
     }
   });
 
-  if (fixedDiffsFound) {
+  // Ajouter les différences triées au tableau
+  Object.entries(variableDiffs)
+    .filter(
+      ([_, values]) =>
+        values.count > 0 && Math.abs(values.totalA - values.totalB) > 0.001
+    )
+    .filter(
+      ([column, _]) =>
+        !fixedElements.some((fixed) =>
+          column.toLowerCase().includes(fixed.toLowerCase())
+        )
+    )
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .forEach(([column, values]) => {
+      const difference = values.totalB - values.totalA;
+      const percentDiff =
+        values.totalA !== 0
+          ? (Math.abs(difference) / Math.abs(values.totalA)) * 100
+          : 100;
+
+      variableElementsData.push([
+        column,
+        values.totalA,
+        values.totalB,
+        difference,
+        `${percentDiff.toFixed(2)}%`,
+      ]);
+    });
+
+  if (variableDiffsFound && variableElementsData.length > 3) {
+    const variableElementsSheet = XLSX.utils.aoa_to_sheet(variableElementsData);
+    XLSX.utils.book_append_sheet(
+      workbook,
+      variableElementsSheet,
+      "Écarts Variables"
+    );
+  }
+
+  // Feuille 8: Synthèse des écarts fixes
+  const fixedElementsData = [
+    ["Écarts des données fixes"],
+    [],
+    [
+      "Rubrique",
+      "Fichier prestataire paie",
+      "Fichier SEGUCE",
+      "Différence",
+      "Différence %",
+    ],
+  ];
+
+  // Collecter les différences par colonne pour les éléments fixes
+  const fixedDiffs = {};
+  let fixedDiffsFound = false;
+
+  comparisonResult.details.forEach((detail) => {
+    if (detail.differences) {
+      detail.differences.forEach((diff) => {
+        const columnLower = diff.column.toLowerCase();
+
+        // Vérifier si la colonne est un élément fixe
+        const isFixed = fixedElements.some((fixedElement) =>
+          columnLower.includes(fixedElement.toLowerCase())
+        );
+
+        if (isFixed && !columnLower.startsWith("col")) {
+          // Ignorer les colonnes génériques
+          if (!fixedDiffs[diff.column]) {
+            fixedDiffs[diff.column] = {
+              totalA: 0,
+              totalB: 0,
+              count: 0,
+            };
+          }
+
+          if (typeof diff.valueA === "number")
+            fixedDiffs[diff.column].totalA += diff.valueA;
+          if (typeof diff.valueB === "number")
+            fixedDiffs[diff.column].totalB += diff.valueB;
+          fixedDiffs[diff.column].count++;
+          fixedDiffsFound = true;
+        }
+      });
+    }
+  });
+
+  // Ajouter les différences triées au tableau
+  Object.entries(fixedDiffs)
+    .filter(
+      ([_, values]) =>
+        values.count > 0 && Math.abs(values.totalA - values.totalB) > 0.001
+    )
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .forEach(([column, values]) => {
+      const difference = values.totalB - values.totalA;
+      const percentDiff =
+        values.totalA !== 0
+          ? (Math.abs(difference) / Math.abs(values.totalA)) * 100
+          : 100;
+
+      fixedElementsData.push([
+        column,
+        values.totalA,
+        values.totalB,
+        difference,
+        `${percentDiff.toFixed(2)}%`,
+      ]);
+    });
+
+  if (fixedDiffsFound && fixedElementsData.length > 3) {
     const fixedElementsSheet = XLSX.utils.aoa_to_sheet(fixedElementsData);
     XLSX.utils.book_append_sheet(workbook, fixedElementsSheet, "Écarts Fixes");
   }
 
-  // Feuille: Synthèse complète des rubriques
+  // Feuille 9: Synthèse complète des rubriques
   const allRubriquesData = [
     ["Synthèse des rubriques"],
     [],
@@ -413,7 +477,10 @@ const exportToExcelWithFormulas = (
   comparisonResult.details.forEach((detail) => {
     if (detail.differences) {
       detail.differences.forEach((diff) => {
-        allColumns.add(diff.column);
+        if (!diff.column.startsWith("Col")) {
+          // Ignorer les colonnes génériques
+          allColumns.add(diff.column);
+        }
       });
     }
   });
@@ -424,6 +491,7 @@ const exportToExcelWithFormulas = (
     .forEach((column) => {
       let totalA = 0;
       let totalB = 0;
+      let count = 0;
 
       comparisonResult.details.forEach((detail) => {
         if (detail.differences) {
@@ -431,12 +499,13 @@ const exportToExcelWithFormulas = (
             if (diff.column === column) {
               if (typeof diff.valueA === "number") totalA += diff.valueA;
               if (typeof diff.valueB === "number") totalB += diff.valueB;
+              count++;
             }
           });
         }
       });
 
-      if (totalA !== 0 || totalB !== 0) {
+      if (count > 0 && Math.abs(totalA - totalB) > 0.001) {
         const difference = totalB - totalA;
         const percentDiff =
           totalA !== 0 ? (Math.abs(difference) / Math.abs(totalA)) * 100 : 100;
@@ -451,22 +520,23 @@ const exportToExcelWithFormulas = (
       }
     });
 
-  const allRubriquesSheet = XLSX.utils.aoa_to_sheet(allRubriquesData);
-  XLSX.utils.book_append_sheet(
-    workbook,
-    allRubriquesSheet,
-    "Synthèse rubriques"
-  );
+  if (allRubriquesData.length > 3) {
+    const allRubriquesSheet = XLSX.utils.aoa_to_sheet(allRubriquesData);
+    XLSX.utils.book_append_sheet(
+      workbook,
+      allRubriquesSheet,
+      "Synthèse rubriques"
+    );
+  }
 
-  // Feuille 7: Lexique des formules
+  // Feuille 10: Lexique des formules
   const lexiqueData = [
     ["Lexique des formules"],
     [],
     ["Rubrique", "Type", "Description", "Formule"],
   ];
 
-  // Récupérer les données du lexique depuis la base de données
-  // Note: Ceci sera implémenté de manière asynchrone dans la fonction app.js
+  // Récupérer les données du lexique
   if (lexiqueItems && lexiqueItems.length > 0) {
     lexiqueItems.forEach((item) => {
       lexiqueData.push([
@@ -578,7 +648,7 @@ const createSheetWithFormulas = (fileData, sheetName) => {
   } catch (error) {
     console.error(
       "Erreur lors de la création de la feuille avec formules:",
-      error,
+      error
     );
     // Fallback: créer une feuille simple sans formules
     const data = [fileData.headers.map((h) => h.key)];

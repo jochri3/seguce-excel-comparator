@@ -179,18 +179,18 @@ app.post(
       req.app.locals.fileBName = fileBName;
       req.app.locals.fileAData = fileAData;
       req.app.locals.fileBData = fileBData;
-     res.render("compare", {
-       title: "Résultats de la réconciliation",
-       fileAName,
-       fileBName,
-       comparisonResult,
-       summary,
-       session,
-       isUpdate,
-       providerType,
-       fileAVersion: fileASaved.version,
-       fileBVersion: fileBSaved.version,
-     });
+  res.render("compare", {
+    title: "Résultats de la réconciliation",
+    fileAName, // Nom du fichier prestataire paie
+    fileBName, // Nom du fichier SEGUCE
+    comparisonResult,
+    summary,
+    session,
+    isUpdate,
+    providerType,
+    fileAVersion: fileASaved.version,
+    fileBVersion: fileBSaved.version,
+  });
 
       // Nettoyer les fichiers uploadés après traitement
       setTimeout(() => {

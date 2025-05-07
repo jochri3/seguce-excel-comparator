@@ -87,6 +87,7 @@
 
                      
 
+<!-- Section pour Récapitulatif des écarts des données fixes -->
 <h4 class="text-primary mb-3">Récapitulatif des écarts des données fixes</h4>
 <div class="table-responsive">
     <table class="table table-bordered table-striped">
@@ -99,34 +100,71 @@
             </tr>
         </thead>
         <tbody>
-            <!-- Éléments fixes -->
-            <% const fixedElements = [
+            <!-- Filtrer uniquement les éléments fixes qui ont des différences -->
+            <% 
+            const fixedElements = [
                 "Matricule", "BU", "Pers. à Charge", "Enfant Légal", "Salaire mensuel",
                 "Ancienneté mensuel", "Sur Salaire mensuel", "Taux horaire", 
                 "Transport mensuel", "Logement mensuel", "Prime astreinte", 
                 "Forfait heures supplémentaire", "Prime de détachement", "Prime Imposable Fixe"
-            ]; %>
+            ];
             
-            <% fixedElements.forEach(element => { 
-                // Rechercher l'élément dans les totaux
-                const valueA = summary.totals.fileA[element] || 0;
-                const valueB = summary.totals.fileB[element] || 0;
-                const diff = valueA - valueB;
-                const hasDiff = diff !== 0;
+            // Collecter les différences par colonne
+            const fixedDifferences = {};
+            
+            comparisonResult.details.forEach(detail => {
+                if (detail.differences) {
+                    detail.differences.forEach(diff => {
+                        // Vérifier si la colonne est dans les éléments fixes
+                        if (fixedElements.some(fixedElement => 
+                            diff.column.toLowerCase().includes(fixedElement.toLowerCase()))) {
+                            
+                            if (!fixedDifferences[diff.column]) {
+                                fixedDifferences[diff.column] = {
+                                    valueA: 0,
+                                    valueB: 0,
+                                    count: 0
+                                };
+                            }
+                            
+                            if (typeof diff.valueA === 'number') 
+                                fixedDifferences[diff.column].valueA += diff.valueA;
+                            if (typeof diff.valueB === 'number') 
+                                fixedDifferences[diff.column].valueB += diff.valueB;
+                                
+                            fixedDifferences[diff.column].count++;
+                        }
+                    });
+                }
+            });
+            
+            // Afficher uniquement les colonnes avec des différences
+            Object.entries(fixedDifferences)
+                .filter(([_, values]) => values.count > 0)
+                .sort((a, b) => a[0].localeCompare(b[0]))
+                .forEach(([column, values]) => {
+                    const diff = values.valueA - values.valueB;
+                    const hasDiff = diff !== 0;
             %>
                 <tr>
-                    <th scope="row"><%= element %></th>
-                    <td class="text-end"><%= valueA.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                    <td class="text-end"><%= valueB.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                    <th scope="row"><%= column %></th>
+                    <td class="text-end"><%= values.valueA.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                    <td class="text-end"><%= values.valueB.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
                     <td class="text-end <%= hasDiff ? 'text-danger' : '' %>">
                         <%= diff.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
                     </td>
                 </tr>
             <% }); %>
+            <% if (Object.keys(fixedDifferences).length === 0) { %>
+                <tr>
+                    <td colspan="4" class="text-center">Aucun écart détecté dans les données fixes</td>
+                </tr>
+            <% } %>
         </tbody>
     </table>
 </div>
 
+<!-- Section pour Récapitulatif des écarts des données variables -->
 <h4 class="text-primary mb-3">Récapitulatif des écarts des données variables</h4>
 <div class="table-responsive">
     <table class="table table-bordered table-striped">
@@ -139,8 +177,9 @@
             </tr>
         </thead>
         <tbody>
-            <!-- Éléments variables -->
-            <% const variableElements = [
+            <!-- Filtrer uniquement les éléments variables qui ont des différences -->
+            <% 
+            const variableElements = [
                 "Jr. Prestés", "JAbsence", "Jrs. Maladie", "Congé Circ.", "Congé Maternité",
                 "Jrs. Ferié", "Jrs. Congé Payés", "Nbre Heure Supp. 1", "Nbre Heure Supp. 2", 
                 "Nbre Heure Supp. 3", "Heures de nuit 25%", "Regule sur congé", "Regule",
@@ -148,24 +187,62 @@
                 "Prime intérim", "13ème mois", "Pagne + frais de couture", "Prime migration IT",
                 "Aide rentrée scolaire", "Bonus", "Prime de mariage", "Prime Audit",
                 "Panier de fin d'année", "Autre prime", "Prime Imposable Variable"
-            ]; %>
+            ];
             
-            <% variableElements.forEach(element => { 
-                // Rechercher l'élément dans les totaux
-                const valueA = summary.totals.fileA[element] || 0;
-                const valueB = summary.totals.fileB[element] || 0;
-                const diff = valueA - valueB;
-                const hasDiff = diff !== 0;
+            // Collecter les différences par colonne
+            const variableDifferences = {};
+            
+            comparisonResult.details.forEach(detail => {
+                if (detail.differences) {
+                    detail.differences.forEach(diff => {
+                        // Vérifier si la colonne est dans les éléments variables ou n'est pas dans les éléments fixes
+                        if (variableElements.some(varElement => 
+                            diff.column.toLowerCase().includes(varElement.toLowerCase())) ||
+                            !fixedElements.some(fixedElement => 
+                            diff.column.toLowerCase().includes(fixedElement.toLowerCase()))) {
+                            
+                            if (!variableDifferences[diff.column]) {
+                                variableDifferences[diff.column] = {
+                                    valueA: 0,
+                                    valueB: 0,
+                                    count: 0
+                                };
+                            }
+                            
+                            if (typeof diff.valueA === 'number') 
+                                variableDifferences[diff.column].valueA += diff.valueA;
+                            if (typeof diff.valueB === 'number') 
+                                variableDifferences[diff.column].valueB += diff.valueB;
+                                
+                            variableDifferences[diff.column].count++;
+                        }
+                    });
+                }
+            });
+            
+            // Afficher uniquement les colonnes avec des différences
+            Object.entries(variableDifferences)
+                .filter(([_, values]) => values.count > 0)
+                .filter(([column, _]) => !fixedElements.some(fixed => column.toLowerCase().includes(fixed.toLowerCase())))
+                .sort((a, b) => a[0].localeCompare(b[0]))
+                .forEach(([column, values]) => {
+                    const diff = values.valueA - values.valueB;
+                    const hasDiff = diff !== 0;
             %>
                 <tr>
-                    <th scope="row"><%= element %></th>
-                    <td class="text-end"><%= valueA.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                    <td class="text-end"><%= valueB.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                    <th scope="row"><%= column %></th>
+                    <td class="text-end"><%= values.valueA.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                    <td class="text-end"><%= values.valueB.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
                     <td class="text-end <%= hasDiff ? 'text-danger' : '' %>">
                         <%= diff.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
                     </td>
                 </tr>
             <% }); %>
+            <% if (Object.keys(variableDifferences).filter(col => !fixedElements.some(fixed => col.toLowerCase().includes(fixed.toLowerCase()))).length === 0) { %>
+                <tr>
+                    <td colspan="4" class="text-center">Aucun écart détecté dans les données variables</td>
+                </tr>
+            <% } %>
         </tbody>
     </table>
 </div>
@@ -338,9 +415,11 @@
         
         <% if (comparisonResult.summary.columnStats.missingInA.length > 0) { %>
             <div class="mb-2">
-                <h6>Colonnes présentes uniquement dans SEGUCE RDC (<%= comparisonResult.summary.columnStats.missingInA.length %>):</h6>
+                <h6>Colonnes présentes uniquement dans SEGUCE (<%= comparisonResult.summary.columnStats.missingInA.length %>):</h6>
                 <ul class="ps-3">
-                    <% comparisonResult.summary.columnStats.missingInA.forEach(col => { %>
+                    <% comparisonResult.summary.columnStats.missingInA
+                        .filter(col => !col.startsWith('Col'))  // Filtrer les colonnes génériques
+                        .forEach(col => { %>
                         <li><span class="badge bg-primary text-wrap"><%= col %></span></li>
                     <% }) %>
                 </ul>
@@ -349,9 +428,11 @@
         
         <% if (comparisonResult.summary.columnStats.missingInB.length > 0) { %>
             <div class="mb-2">
-                <h6>Colonnes présentes uniquement dans le Fichier Fournisseur (<%= comparisonResult.summary.columnStats.missingInB.length %>):</h6>
+                <h6>Colonnes présentes uniquement dans le Fichier prestataire paie (<%= comparisonResult.summary.columnStats.missingInB.length %>):</h6>
                 <ul class="ps-3">
-                    <% comparisonResult.summary.columnStats.missingInB.forEach(col => { %>
+                    <% comparisonResult.summary.columnStats.missingInB
+                        .filter(col => !col.startsWith('Col'))  // Filtrer les colonnes génériques
+                        .forEach(col => { %>
                         <li><span class="badge bg-secondary text-wrap"><%= col %></span></li>
                     <% }) %>
                 </ul>
