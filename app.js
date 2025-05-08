@@ -64,7 +64,7 @@ const upload = multer({
 
 // Routes
 app.get("/", (req, res) => {
-  res.render("index", { title: "SEGUCE Réconciliation Salariale" });
+  res.render("index", { title: "Réconciliation de Paie" });
 });
 
 // Route pour traiter l'upload des deux fichiers Excel
@@ -179,18 +179,18 @@ app.post(
       req.app.locals.fileBName = fileBName;
       req.app.locals.fileAData = fileAData;
       req.app.locals.fileBData = fileBData;
-  res.render("compare", {
-    title: "Résultats de la réconciliation",
-    fileAName, // Nom du fichier prestataire paie
-    fileBName, // Nom du fichier SEGUCE
-    comparisonResult,
-    summary,
-    session,
-    isUpdate,
-    providerType,
-    fileAVersion: fileASaved.version,
-    fileBVersion: fileBSaved.version,
-  });
+      res.render("compare", {
+        title: "Résultats de la réconciliation",
+        fileAName, // Nom du fichier prestataire paie
+        fileBName, // Nom du fichier SEGUCE
+        comparisonResult,
+        summary,
+        session,
+        isUpdate,
+        providerType,
+        fileAVersion: fileASaved.version,
+        fileBVersion: fileBSaved.version,
+      });
 
       // Nettoyer les fichiers uploadés après traitement
       setTimeout(() => {
@@ -1023,15 +1023,63 @@ app.get(
       const data = JSON.parse(fileData.data);
       const formulas = JSON.parse(fileData.formulas || "{}");
 
-      // Extraire les totaux (dernière ligne ou données spécifiques)
+      // Extraire les totaux
       let totals = {};
-      if (data.length > 0) {
-        // On considère la dernière ligne comme les totaux
-        const lastRowIndex = data.length - 1;
-        totals = { ...data[lastRowIndex] };
 
-        // Nous supprimons la dernière ligne des données normales, car elle sera affichée comme totaux
-        data.pop();
+      // Liste des colonnes qui ne devraient pas avoir de totaux
+      const nonNumericColumns = [
+        "Matricule",
+        "BU",
+        "Enfant Légal",
+        "Pers. à Charge",
+      ];
+
+      if (data.length > 0) {
+        // Vérifier si la dernière ligne est une ligne de totaux
+        const lastRow = data[data.length - 1];
+        const firstColValue = Object.values(lastRow)[0];
+        const isLastRowTotals =
+          typeof firstColValue === "string" &&
+          (firstColValue === "" ||
+            firstColValue.includes("TOTAL") ||
+            firstColValue.includes("Total"));
+
+        if (isLastRowTotals) {
+          // Utiliser la dernière ligne comme totaux
+          totals = { ...lastRow };
+          // Supprimer la ligne de totaux des données
+          data.pop();
+        } else {
+          // Calculer les totaux pour les colonnes numériques
+          Object.keys(data[0]).forEach((column) => {
+            if (!nonNumericColumns.includes(column)) {
+              let columnIsNumeric = false;
+              let sum = 0;
+
+              // Vérifier si la colonne contient des valeurs numériques
+              for (let i = 0; i < Math.min(10, data.length); i++) {
+                if (typeof data[i][column] === "number") {
+                  columnIsNumeric = true;
+                  break;
+                }
+              }
+
+              if (columnIsNumeric) {
+                // Calculer la somme pour cette colonne
+                data.forEach((row) => {
+                  if (typeof row[column] === "number") {
+                    sum += row[column];
+                  }
+                });
+                totals[column] = sum;
+              } else {
+                totals[column] = "";
+              }
+            } else {
+              totals[column] = "";
+            }
+          });
+        }
       }
 
       // Déterminer le label du fichier
@@ -1048,7 +1096,7 @@ app.get(
           createdBy: fileData.created_by,
           data: data,
           formulas: formulas,
-          totals: totals, // Ajout des totaux
+          totals: totals, // Totaux calculés ou extraits
         },
         sessionId,
         fileLabel,

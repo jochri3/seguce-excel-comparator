@@ -24,6 +24,15 @@
             white-space: nowrap;
             padding: 8px 15px;
         }
+        
+        /* Fixer l'en-tête du tableau lors du défilement vertical */
+        .table thead th {
+            position: sticky;
+            top: 0;
+            background-color: #f8f9fa;
+            z-index: 10;
+            box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
+        }
     </style>
 </head>
 <body>
@@ -92,9 +101,19 @@
                             <% if (fileData.totals && Object.keys(fileData.totals).length > 0) { %>
                                 <tfoot>
                                     <tr class="totals-row">
-                                        <% Object.keys(fileData.data[0]).forEach(column => { %>
+                                        <% 
+                                        // Définir les colonnes qui ne devraient pas avoir de totaux
+                                        const nonTotalColumns = ['Matricule', 'BU', 'Enfant Légal'];
+                                        let isFirstColumn = true;
+                                        Object.keys(fileData.data[0]).forEach(column => { 
+                                        %>
                                             <td>
-                                                <% if (fileData.totals[column] !== undefined) { %>
+                                                <% if (isFirstColumn) { %>
+                                                    <strong>TOTAUX</strong>
+                                                    <% isFirstColumn = false; %>
+                                                <% } else if (nonTotalColumns.includes(column)) { %>
+                                                    -
+                                                <% } else if (fileData.totals[column] !== undefined) { %>
                                                     <% if (typeof fileData.totals[column] === 'number') { %>
                                                         <%= fileData.totals[column].toLocaleString('fr-FR', {maximumFractionDigits: 2}) %>
                                                     <% } else { %>
