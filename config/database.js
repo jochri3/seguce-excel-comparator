@@ -44,15 +44,16 @@ const initDatabase = () => {
 
         // Table des résultats de comparaison
         db.run(`CREATE TABLE IF NOT EXISTS comparison_results (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          session_id TEXT,
-          version INTEGER,
-          total_differences INTEGER,
-          column_differences TEXT,
-          details TEXT,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY (session_id) REFERENCES sessions(session_id)
-        )`);
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  session_id TEXT,
+  version INTEGER,
+  total_differences INTEGER,
+  column_differences TEXT,
+  details TEXT,
+  totals TEXT, /* Nouvelle colonne pour stocker les totaux */
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (session_id) REFERENCES sessions(session_id)
+)`);
 
         // Table des colonnes lexique
         db.run(`CREATE TABLE IF NOT EXISTS lexicon_columns (

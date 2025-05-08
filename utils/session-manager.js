@@ -122,14 +122,19 @@ class SessionManager {
 
     return new Promise((resolve, reject) => {
       db.run(
-        `INSERT INTO comparison_results (session_id, version, total_differences, column_differences, details) 
-         VALUES (?, ?, ?, ?, ?)`,
+        `INSERT INTO comparison_results (session_id, version, total_differences, column_differences, details, totals) 
+       VALUES (?, ?, ?, ?, ?, ?)`,
         [
           sessionId,
           version,
           comparisonData.summary.totalDifferences,
           JSON.stringify(comparisonData.summary.columnDifferences),
           JSON.stringify(comparisonData.details),
+          JSON.stringify({
+            totals: comparisonData.totals,
+            chargesCategories: comparisonData.summary.chargesCategories,
+            sumComparison: comparisonData.summary.totals,
+          }),
         ],
         function (err) {
           if (err) reject(err);

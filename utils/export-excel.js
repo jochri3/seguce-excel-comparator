@@ -148,13 +148,13 @@ const exportToExcelWithFormulas = (
   const detailsSheet = XLSX.utils.aoa_to_sheet(detailsData);
   XLSX.utils.book_append_sheet(workbook, detailsSheet, "Détails");
 
-  // Feuille 3: Données Fournisseur avec formules
-  const sheetA = createSheetWithFormulas(fileAData, "Données Fournisseur");
-  XLSX.utils.book_append_sheet(workbook, sheetA, "Données Fournisseur");
+  // // Feuille 3: Données Fournisseur avec formules
+  // const sheetA = createSheetWithFormulas(fileAData, "Données Fournisseur");
+  // XLSX.utils.book_append_sheet(workbook, sheetA, "Données Fournisseur");
 
-  // Feuille 4: Données SEGUCE avec formules
-  const sheetB = createSheetWithFormulas(fileBData, "Données SEGUCE");
-  XLSX.utils.book_append_sheet(workbook, sheetB, "Données SEGUCE");
+  // // Feuille 4: Données SEGUCE avec formules
+  // const sheetB = createSheetWithFormulas(fileBData, "Données SEGUCE");
+  // XLSX.utils.book_append_sheet(workbook, sheetB, "Données SEGUCE");
 
   // Feuille 5: Synthèse des doublons (nouvelle)
   if (comparisonResult.summary.duplicates) {
@@ -582,6 +582,81 @@ const exportToExcelWithFormulas = (
 
   const lexiqueSheet = XLSX.utils.aoa_to_sheet(lexiqueData);
   XLSX.utils.book_append_sheet(workbook, lexiqueSheet, "Lexique");
+
+  // Feuille 11 : Pour les charges
+
+  if (comparisonResult.summary.chargesCategories) {
+    const chargesData = [
+      ["Récapitulatif des charges"],
+      [],
+      ["", "Fichier prestataire paie", "Fichier SEGUCE", "Différence"],
+
+      ["Charges salariales", "", "", ""],
+    ];
+
+    // Ajouter les charges salariales
+    comparisonResult.summary.chargesCategories.chargesSalariales.items.forEach(
+      (item) => {
+        chargesData.push([
+          item.column,
+          item.valueA,
+          item.valueB,
+          item.difference,
+        ]);
+      }
+    );
+
+    // Ajouter le total des charges salariales
+    chargesData.push([
+      "Total charges salariales",
+      comparisonResult.summary.chargesCategories.chargesSalariales.totalA,
+      comparisonResult.summary.chargesCategories.chargesSalariales.totalB,
+      comparisonResult.summary.chargesCategories.chargesSalariales.difference,
+    ]);
+
+    // Ajouter un séparateur
+    chargesData.push([]);
+
+    // Ajouter les charges patronales
+    chargesData.push(["Charges patronales", "", "", ""]);
+    comparisonResult.summary.chargesCategories.chargesPatronales.items.forEach(
+      (item) => {
+        chargesData.push([
+          item.column,
+          item.valueA,
+          item.valueB,
+          item.difference,
+        ]);
+      }
+    );
+
+    // Ajouter le total des charges patronales
+    chargesData.push([
+      "Total charges patronales",
+      comparisonResult.summary.chargesCategories.chargesPatronales.totalA,
+      comparisonResult.summary.chargesCategories.chargesPatronales.totalB,
+      comparisonResult.summary.chargesCategories.chargesPatronales.difference,
+    ]);
+
+    // Ajouter un séparateur
+    chargesData.push([]);
+
+    // Ajouter la répartition des coûts
+    chargesData.push(["Répartition des coûts liés aux salaires", "", "", ""]);
+    comparisonResult.summary.chargesCategories.coutsSalaires.items.forEach(
+      (item) => {
+        chargesData.push([
+          item.column,
+          item.valueA,
+          item.valueB,
+          item.difference,
+        ]);
+      }
+    );
+
+    const chargesSheet = XLSX.utils.aoa_to_sheet(chargesData);
+    XLSX.utils.book_append_sheet(workbook, chargesSheet, "Récap charges");
+  }
 
   // Convertir le classeur en buffer
   const excelBuffer = XLSX.write(workbook, {

@@ -87,7 +87,8 @@
 
                      
 
-<!-- Section pour Récapitulatif des écarts des données fixes -->
+
+<!-- Récapitulatif des écarts des données fixes -->
 <h4 class="text-primary mb-3">Récapitulatif des écarts des données fixes</h4>
 <div class="table-responsive">
     <table class="table table-bordered table-striped">
@@ -100,62 +101,25 @@
             </tr>
         </thead>
         <tbody>
-            <!-- Filtrer uniquement les éléments fixes qui ont des différences -->
             <% 
-            const fixedElements = [
-                "Matricule", "BU", "Pers. à Charge", "Enfant Légal", "Salaire mensuel",
-                "Ancienneté mensuel", "Sur Salaire mensuel", "Taux horaire", 
-                "Transport mensuel", "Logement mensuel", "Prime astreinte", 
-                "Forfait heures supplémentaire", "Prime de détachement", "Prime Imposable Fixe"
-            ];
-            
-            // Collecter les différences par colonne
-            const fixedDifferences = {};
-            
-            comparisonResult.details.forEach(detail => {
-                if (detail.differences) {
-                    detail.differences.forEach(diff => {
-                        // Vérifier si la colonne est dans les éléments fixes
-                        if (fixedElements.some(fixedElement => 
-                            diff.column.toLowerCase().includes(fixedElement.toLowerCase()))) {
-                            
-                            if (!fixedDifferences[diff.column]) {
-                                fixedDifferences[diff.column] = {
-                                    valueA: 0,
-                                    valueB: 0,
-                                    count: 0
-                                };
-                            }
-                            
-                            if (typeof diff.valueA === 'number') 
-                                fixedDifferences[diff.column].valueA += diff.valueA;
-                            if (typeof diff.valueB === 'number') 
-                                fixedDifferences[diff.column].valueB += diff.valueB;
-                                
-                            fixedDifferences[diff.column].count++;
-                        }
-                    });
-                }
-            });
-            
-            // Afficher uniquement les colonnes avec des différences
-            Object.entries(fixedDifferences)
-                .filter(([_, values]) => values.count > 0)
-                .sort((a, b) => a[0].localeCompare(b[0]))
-                .forEach(([column, values]) => {
-                    const diff = values.valueA - values.valueB;
-                    const hasDiff = diff !== 0;
+            // Afficher les totaux pour les colonnes fixes
+            if (comparisonResult.summary.totals && comparisonResult.summary.totals.fixed) {
+                comparisonResult.summary.totals.fixed
+                    .sort((a, b) => a.column.localeCompare(b.column))
+                    .forEach(item => {
+                        const diff = item.valueA - item.valueB;
+                        const hasDiff = Math.abs(diff) > 0.01; // Tolérance pour les erreurs d'arrondi
             %>
                 <tr>
-                    <th scope="row"><%= column %></th>
-                    <td class="text-end"><%= values.valueA.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                    <td class="text-end"><%= values.valueB.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                    <th scope="row"><%= item.column %></th>
+                    <td class="text-end"><%= item.valueA.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                    <td class="text-end"><%= item.valueB.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
                     <td class="text-end <%= hasDiff ? 'text-danger' : '' %>">
                         <%= diff.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
                     </td>
                 </tr>
-            <% }); %>
-            <% if (Object.keys(fixedDifferences).length === 0) { %>
+            <% }); 
+            } else { %>
                 <tr>
                     <td colspan="4" class="text-center">Aucun écart détecté dans les données fixes</td>
                 </tr>
@@ -164,7 +128,7 @@
     </table>
 </div>
 
-<!-- Section pour Récapitulatif des écarts des données variables -->
+<!-- Récapitulatif des écarts des données variables -->
 <h4 class="text-primary mb-3">Récapitulatif des écarts des données variables</h4>
 <div class="table-responsive">
     <table class="table table-bordered table-striped">
@@ -177,68 +141,25 @@
             </tr>
         </thead>
         <tbody>
-            <!-- Filtrer uniquement les éléments variables qui ont des différences -->
             <% 
-            const variableElements = [
-                "Jr. Prestés", "JAbsence", "Jrs. Maladie", "Congé Circ.", "Congé Maternité",
-                "Jrs. Ferié", "Jrs. Congé Payés", "Nbre Heure Supp. 1", "Nbre Heure Supp. 2", 
-                "Nbre Heure Supp. 3", "Heures de nuit 25%", "Regule sur congé", "Regule",
-                "Prime de bonne conduite auto", "Prime de production", "Aide sociale",
-                "Prime intérim", "13ème mois", "Pagne + frais de couture", "Prime migration IT",
-                "Aide rentrée scolaire", "Bonus", "Prime de mariage", "Prime Audit",
-                "Panier de fin d'année", "Autre prime", "Prime Imposable Variable"
-            ];
-            
-            // Collecter les différences par colonne
-            const variableDifferences = {};
-            
-            comparisonResult.details.forEach(detail => {
-                if (detail.differences) {
-                    detail.differences.forEach(diff => {
-                        // Vérifier si la colonne est dans les éléments variables ou n'est pas dans les éléments fixes
-                        if (variableElements.some(varElement => 
-                            diff.column.toLowerCase().includes(varElement.toLowerCase())) ||
-                            !fixedElements.some(fixedElement => 
-                            diff.column.toLowerCase().includes(fixedElement.toLowerCase()))) {
-                            
-                            if (!variableDifferences[diff.column]) {
-                                variableDifferences[diff.column] = {
-                                    valueA: 0,
-                                    valueB: 0,
-                                    count: 0
-                                };
-                            }
-                            
-                            if (typeof diff.valueA === 'number') 
-                                variableDifferences[diff.column].valueA += diff.valueA;
-                            if (typeof diff.valueB === 'number') 
-                                variableDifferences[diff.column].valueB += diff.valueB;
-                                
-                            variableDifferences[diff.column].count++;
-                        }
-                    });
-                }
-            });
-            
-            // Afficher uniquement les colonnes avec des différences
-            Object.entries(variableDifferences)
-                .filter(([_, values]) => values.count > 0)
-                .filter(([column, _]) => !fixedElements.some(fixed => column.toLowerCase().includes(fixed.toLowerCase())))
-                .sort((a, b) => a[0].localeCompare(b[0]))
-                .forEach(([column, values]) => {
-                    const diff = values.valueA - values.valueB;
-                    const hasDiff = diff !== 0;
+            // Afficher les totaux pour les colonnes variables
+            if (comparisonResult.summary.totals && comparisonResult.summary.totals.variable) {
+                comparisonResult.summary.totals.variable
+                    .sort((a, b) => a.column.localeCompare(b.column))
+                    .forEach(item => {
+                        const diff = item.valueA - item.valueB;
+                        const hasDiff = Math.abs(diff) > 0.01; // Tolérance pour les erreurs d'arrondi
             %>
                 <tr>
-                    <th scope="row"><%= column %></th>
-                    <td class="text-end"><%= values.valueA.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                    <td class="text-end"><%= values.valueB.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                    <th scope="row"><%= item.column %></th>
+                    <td class="text-end"><%= item.valueA.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                    <td class="text-end"><%= item.valueB.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
                     <td class="text-end <%= hasDiff ? 'text-danger' : '' %>">
                         <%= diff.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
                     </td>
                 </tr>
-            <% }); %>
-            <% if (Object.keys(variableDifferences).filter(col => !fixedElements.some(fixed => col.toLowerCase().includes(fixed.toLowerCase()))).length === 0) { %>
+            <% }); 
+            } else { %>
                 <tr>
                     <td colspan="4" class="text-center">Aucun écart détecté dans les données variables</td>
                 </tr>
@@ -247,6 +168,54 @@
     </table>
 </div>
 
+<!-- Colonnes présentes uniquement dans un fichier -->
+<% if ((comparisonResult.summary.totals && comparisonResult.summary.totals.onlyInA && comparisonResult.summary.totals.onlyInA.length > 0) || 
+       (comparisonResult.summary.totals && comparisonResult.summary.totals.onlyInB && comparisonResult.summary.totals.onlyInB.length > 0)) { %>
+    <h4 class="text-primary mb-3">Colonnes présentes dans un seul fichier</h4>
+    <div class="table-responsive">
+        <table class="table table-bordered table-striped">
+            <thead class="table-dark">
+                <tr>
+                    <th scope="col">Rubrique</th>
+                    <th scope="col">Présent dans</th>
+                    <th scope="col">Valeur</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% 
+                // Colonnes uniquement dans le fichier A
+                if (comparisonResult.summary.totals.onlyInA) {
+                    comparisonResult.summary.totals.onlyInA
+                        .sort((a, b) => a.column.localeCompare(b.column))
+                        .forEach(item => {
+                %>
+                    <tr>
+                        <th scope="row"><%= item.column %></th>
+                        <td>Fichier prestataire paie</td>
+                        <td class="text-end"><%= item.value.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                    </tr>
+                <% }); 
+                }
+                
+                // Colonnes uniquement dans le fichier B
+                if (comparisonResult.summary.totals.onlyInB) {
+                    comparisonResult.summary.totals.onlyInB
+                        .sort((a, b) => a.column.localeCompare(b.column))
+                        .forEach(item => {
+                %>
+                    <tr>
+                        <th scope="row"><%= item.column %></th>
+                        <td>Fichier SEGUCE</td>
+                        <td class="text-end"><%= item.value.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                    </tr>
+                <% }); 
+                } %>
+            </tbody>
+        </table>
+    </div>
+<% } %>
+
+<!-- Récapitulatif des charges -->
 <h4 class="text-primary mb-3">Récapitulatif des charges</h4>
 <div class="table-responsive">
     <table class="table table-bordered table-striped">
@@ -259,118 +228,78 @@
             </tr>
         </thead>
         <tbody>
-            <tr>
-                <th colspan="4" class="table-secondary">Charges salariales</th>
+            <!-- Charges salariales -->
+            <tr class="table-secondary">
+                <th colspan="4">Charges salariales</th>
             </tr>
-            <tr>
-                <th scope="row">Cnss QPO</th>
-                <td class="text-end"><%= summary.totals.fileA['Cnss QPO'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                <td class="text-end"><%= summary.totals.fileB['Cnss QPO'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                <td class="text-end <%= (summary.totals.fileA['Cnss QPO'] - summary.totals.fileB['Cnss QPO']) !== 0 ? 'text-danger' : '' %>">
-                    <%= (summary.totals.fileA['Cnss QPO'] - summary.totals.fileB['Cnss QPO']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
-                </td>
+            <% if (comparisonResult.summary.chargesCategories && comparisonResult.summary.chargesCategories.chargesSalariales) { %>
+                <% comparisonResult.summary.chargesCategories.chargesSalariales.items.forEach(item => { %>
+                    <tr>
+                        <th scope="row"><%= item.column %></th>
+                        <td class="text-end"><%= item.valueA.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                        <td class="text-end"><%= item.valueB.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                        <td class="text-end <%= Math.abs(item.difference) > 0.01 ? 'text-danger' : '' %>">
+                            <%= item.difference.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                        </td>
+                    </tr>
+                <% }); %>
+                <!-- Total charges salariales -->
+                <tr class="table-primary">
+                    <th scope="row">Total charges salariales</th>
+                    <td class="text-end fw-bold"><%= comparisonResult.summary.chargesCategories.chargesSalariales.totalA.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                    <td class="text-end fw-bold"><%= comparisonResult.summary.chargesCategories.chargesSalariales.totalB.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                    <td class="text-end fw-bold <%= Math.abs(comparisonResult.summary.chargesCategories.chargesSalariales.difference) > 0.01 ? 'text-danger' : '' %>">
+                        <%= comparisonResult.summary.chargesCategories.chargesSalariales.difference.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                    </td>
+                </tr>
+            <% } %>
+            
+            <!-- Charges patronales -->
+            <tr class="table-secondary">
+                <th colspan="4">Charges patronales</th>
             </tr>
-            <tr>
-                <th scope="row">IPR</th>
-                <td class="text-end"><%= summary.totals.fileA['IPR'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                <td class="text-end"><%= summary.totals.fileB['IPR'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                <td class="text-end <%= (summary.totals.fileA['IPR'] - summary.totals.fileB['IPR']) !== 0 ? 'text-danger' : '' %>">
-                    <%= (summary.totals.fileA['IPR'] - summary.totals.fileB['IPR']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
-                </td>
+            <% if (comparisonResult.summary.chargesCategories && comparisonResult.summary.chargesCategories.chargesPatronales) { %>
+                <% comparisonResult.summary.chargesCategories.chargesPatronales.items.forEach(item => { %>
+                    <tr>
+                        <th scope="row"><%= item.column %></th>
+                        <td class="text-end"><%= item.valueA.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                        <td class="text-end"><%= item.valueB.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                        <td class="text-end <%= Math.abs(item.difference) > 0.01 ? 'text-danger' : '' %>">
+                            <%= item.difference.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                        </td>
+                    </tr>
+                <% }); %>
+                <!-- Total charges patronales -->
+                <tr class="table-primary">
+                    <th scope="row">Total charges patronales</th>
+                    <td class="text-end fw-bold"><%= comparisonResult.summary.chargesCategories.chargesPatronales.totalA.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                    <td class="text-end fw-bold"><%= comparisonResult.summary.chargesCategories.chargesPatronales.totalB.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                    <td class="text-end fw-bold <%= Math.abs(comparisonResult.summary.chargesCategories.chargesPatronales.difference) > 0.01 ? 'text-danger' : '' %>">
+                        <%= comparisonResult.summary.chargesCategories.chargesPatronales.difference.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                    </td>
+                </tr>
+            <% } %>
+            
+            <!-- Répartition des coûts liés aux salaires -->
+            <tr class="table-secondary">
+                <th colspan="4">Répartition des coûts liés aux salaires</th>
             </tr>
-            <tr class="table-primary">
-                <th scope="row">Total charges salariales</th>
-                <td class="text-end fw-bold"><%= (summary.totals.fileA['Cnss QPO'] + summary.totals.fileA['IPR']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                <td class="text-end fw-bold"><%= (summary.totals.fileB['Cnss QPO'] + summary.totals.fileB['IPR']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                <td class="text-end fw-bold <%= ((summary.totals.fileA['Cnss QPO'] + summary.totals.fileA['IPR']) - (summary.totals.fileB['Cnss QPO'] + summary.totals.fileB['IPR'])) !== 0 ? 'text-danger' : '' %>">
-                    <%= ((summary.totals.fileA['Cnss QPO'] + summary.totals.fileA['IPR']) - (summary.totals.fileB['Cnss QPO'] + summary.totals.fileB['IPR'])).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
-                </td>
-            </tr>
-            <tr>
-                <th colspan="4" class="table-secondary">Charges patronales</th>
-            </tr>
-            <tr>
-                <th scope="row">Cnss QPP</th>
-                <td class="text-end"><%= summary.totals.fileA['Cnss QPP'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                <td class="text-end"><%= summary.totals.fileB['Cnss QPP'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                <td class="text-end <%= (summary.totals.fileA['Cnss QPP'] - summary.totals.fileB['Cnss QPP']) !== 0 ? 'text-danger' : '' %>">
-                    <%= (summary.totals.fileA['Cnss QPP'] - summary.totals.fileB['Cnss QPP']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
-                </td>
-            </tr>
-            <tr>
-                <th scope="row">Inpp</th>
-                <td class="text-end"><%= summary.totals.fileA['Inpp'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                <td class="text-end"><%= summary.totals.fileB['Inpp'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                <td class="text-end <%= (summary.totals.fileA['Inpp'] - summary.totals.fileB['Inpp']) !== 0 ? 'text-danger' : '' %>">
-                    <%= (summary.totals.fileA['Inpp'] - summary.totals.fileB['Inpp']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
-                </td>
-            </tr>
-            <tr>
-                <th scope="row">Onem</th>
-                <td class="text-end"><%= summary.totals.fileA['Onem'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                <td class="text-end"><%= summary.totals.fileB['Onem'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                <td class="text-end <%= (summary.totals.fileA['Onem'] - summary.totals.fileB['Onem']) !== 0 ? 'text-danger' : '' %>">
-                    <%= (summary.totals.fileA['Onem'] - summary.totals.fileB['Onem']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
-                </td>
-            </tr>
-            <tr class="table-primary">
-                <th scope="row">Total charges patronales</th>
-                <td class="text-end fw-bold"><%= summary.totals.fileA['Total Charge Patronale'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                <td class="text-end fw-bold"><%= summary.totals.fileB['Total Charge Patronale'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                <td class="text-end fw-bold <%= (summary.totals.fileA['Total Charge Patronale'] - summary.totals.fileB['Total Charge Patronale']) !== 0 ? 'text-danger' : '' %>">
-                    <%= (summary.totals.fileA['Total Charge Patronale'] - summary.totals.fileB['Total Charge Patronale']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
-                </td>
-            </tr>
-            <tr>
-                <th colspan="4" class="table-secondary">Répartition des coûts liés aux salaires</th>
-            </tr>
-            <tr>
-                <th scope="row">Coût Salarial</th>
-                <td class="text-end"><%= summary.totals.fileA['Coût Salarial'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                <td class="text-end"><%= summary.totals.fileB['Coût Salarial'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                <td class="text-end <%= (summary.totals.fileA['Coût Salarial'] - summary.totals.fileB['Coût Salarial']) !== 0 ? 'text-danger' : '' %>">
-                    <%= (summary.totals.fileA['Coût Salarial'] - summary.totals.fileB['Coût Salarial']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
-                </td>
-            </tr>
-            <tr>
-                <th scope="row">Masse Salariale</th>
-                <td class="text-end"><%= summary.totals.fileA['Masse Salariale'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                <td class="text-end"><%= summary.totals.fileB['Masse Salariale'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                <td class="text-end <%= (summary.totals.fileA['Masse Salariale'] - summary.totals.fileB['Masse Salariale']) !== 0 ? 'text-danger' : '' %>">
-                    <%= (summary.totals.fileA['Masse Salariale'] - summary.totals.fileB['Masse Salariale']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
-                </td>
-            </tr>
-            <tr>
-                <th scope="row">Net à Payer</th>
-                <td class="text-end"><%= summary.totals.fileA['Net à Payer'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                <td class="text-end"><%= summary.totals.fileB['Net à Payer'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                <td class="text-end <%= (summary.totals.fileA['Net à Payer'] - summary.totals.fileB['Net à Payer']) !== 0 ? 'text-danger' : '' %>">
-                    <%= (summary.totals.fileA['Net à Payer'] - summary.totals.fileB['Net à Payer']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
-                </td>
-            </tr>
-            <tr>
-                <th scope="row">Frais de Services</th>
-                <td class="text-end"><%= summary.totals.fileA['Frais de Services'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                <td class="text-end"><%= summary.totals.fileB['Frais de Services'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                <td class="text-end <%= (summary.totals.fileA['Frais de Services'] - summary.totals.fileB['Frais de Services']) !== 0 ? 'text-danger' : '' %>">
-                    <%= (summary.totals.fileA['Frais de Services'] - summary.totals.fileB['Frais de Services']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
-                </td>
-            </tr>
-            <tr>
-                <th scope="row">TVA 16% Frais Services</th>
-                <td class="text-end"><%= summary.totals.fileA['TVA 16% Frais Services'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                <td class="text-end"><%= summary.totals.fileB['TVA 16% Frais Services'].toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                <td class="text-end <%= (summary.totals.fileA['TVA 16% Frais Services'] - summary.totals.fileB['TVA 16% Frais Services']) !== 0 ? 'text-danger' : '' %>">
-                    <%= (summary.totals.fileA['TVA 16% Frais Services'] - summary.totals.fileB['TVA 16% Frais Services']).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
-                </td>
-            </tr>
+            <% if (comparisonResult.summary.chargesCategories && comparisonResult.summary.chargesCategories.coutsSalaires) { %>
+                <% comparisonResult.summary.chargesCategories.coutsSalaires.items.forEach(item => { %>
+                    <tr>
+                        <th scope="row"><%= item.column %></th>
+                        <td class="text-end"><%= item.valueA.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                        <td class="text-end"><%= item.valueB.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                        <td class="text-end <%= Math.abs(item.difference) > 0.01 ? 'text-danger' : '' %>">
+                            <%= item.difference.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                        </td>
+                    </tr>
+                <% }); %>
+            <% } %>
         </tbody>
     </table>
 </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+                   
 
         <div class="row mb-4">
             <div class="col-12">

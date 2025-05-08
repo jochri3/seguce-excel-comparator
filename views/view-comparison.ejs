@@ -31,6 +31,163 @@
             </div>
         </div>
 
+
+
+<!-- NOUVEAU -->
+ <!-- Section des récapitulatifs -->
+<% if (comparisonData.totals && comparisonData.totals.chargesCategories) { %>
+<div class="card shadow mb-4">
+    <div class="card-header bg-primary text-white">
+        <h4 class="card-title mb-0">Récapitulatif des charges</h4>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped">
+                <thead class="table-dark">
+                    <tr>
+                        <th scope="col">Rubrique</th>
+                        <th scope="col">Fichier prestataire paie</th>
+                        <th scope="col">Fichier SEGUCE</th>
+                        <th scope="col">Différence</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Charges salariales -->
+                    <tr class="table-secondary">
+                        <th colspan="4">Charges salariales</th>
+                    </tr>
+                    <% comparisonData.totals.chargesCategories.chargesSalariales.items.forEach(item => { %>
+                        <tr>
+                            <th scope="row"><%= item.column %></th>
+                            <td class="text-end"><%= item.valueA.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                            <td class="text-end"><%= item.valueB.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                            <td class="text-end <%= Math.abs(item.difference) > 0.01 ? 'text-danger' : '' %>">
+                                <%= item.difference.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                            </td>
+                        </tr>
+                    <% }); %>
+                    <!-- Total charges salariales -->
+                    <tr class="table-primary">
+                        <th scope="row">Total charges salariales</th>
+                        <td class="text-end fw-bold"><%= comparisonData.totals.chargesCategories.chargesSalariales.totalA.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                        <td class="text-end fw-bold"><%= comparisonData.totals.chargesCategories.chargesSalariales.totalB.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                        <td class="text-end fw-bold <%= Math.abs(comparisonData.totals.chargesCategories.chargesSalariales.difference) > 0.01 ? 'text-danger' : '' %>">
+                            <%= comparisonData.totals.chargesCategories.chargesSalariales.difference.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                        </td>
+                    </tr>
+                    
+                    <!-- Charges patronales -->
+                    <tr class="table-secondary">
+                        <th colspan="4">Charges patronales</th>
+                    </tr>
+                    <% comparisonData.totals.chargesCategories.chargesPatronales.items.forEach(item => { %>
+                        <tr>
+                            <th scope="row"><%= item.column %></th>
+                            <td class="text-end"><%= item.valueA.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                            <td class="text-end"><%= item.valueB.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                            <td class="text-end <%= Math.abs(item.difference) > 0.01 ? 'text-danger' : '' %>">
+                                <%= item.difference.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                            </td>
+                        </tr>
+                    <% }); %>
+                    <!-- Total charges patronales -->
+                    <tr class="table-primary">
+                        <th scope="row">Total charges patronales</th>
+                        <td class="text-end fw-bold"><%= comparisonData.totals.chargesCategories.chargesPatronales.totalA.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                        <td class="text-end fw-bold"><%= comparisonData.totals.chargesCategories.chargesPatronales.totalB.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                        <td class="text-end fw-bold <%= Math.abs(comparisonData.totals.chargesCategories.chargesPatronales.difference) > 0.01 ? 'text-danger' : '' %>">
+                            <%= comparisonData.totals.chargesCategories.chargesPatronales.difference.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                        </td>
+                    </tr>
+                    
+                    <!-- Répartition des coûts liés aux salaires -->
+                    <tr class="table-secondary">
+                        <th colspan="4">Répartition des coûts liés aux salaires</th>
+                    </tr>
+                    <% comparisonData.totals.chargesCategories.coutsSalaires.items.forEach(item => { %>
+                        <tr>
+                            <th scope="row"><%= item.column %></th>
+                            <td class="text-end"><%= item.valueA.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                            <td class="text-end"><%= item.valueB.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                            <td class="text-end <%= Math.abs(item.difference) > 0.01 ? 'text-danger' : '' %>">
+                                <%= item.difference.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                            </td>
+                        </tr>
+                    <% }); %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<% } %>
+
+<!-- Récapitulatifs des écarts des données fixes et variables -->
+<% if (comparisonData.totals && comparisonData.totals.sumComparison) { %>
+<div class="card shadow mb-4">
+    <div class="card-header bg-primary text-white">
+        <h4 class="card-title mb-0">Récapitulatif des écarts</h4>
+    </div>
+    <div class="card-body">
+        <!-- Données fixes -->
+        <h5 class="text-primary mb-3">Écarts des données fixes</h5>
+        <div class="table-responsive mb-4">
+            <table class="table table-bordered table-striped">
+                <thead class="table-dark">
+                    <tr>
+                        <th scope="col">Rubrique</th>
+                        <th scope="col">Fichier prestataire paie</th>
+                        <th scope="col">Fichier SEGUCE</th>
+                        <th scope="col">Différence</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% comparisonData.totals.sumComparison.fixed.forEach(item => { %>
+                        <tr>
+                            <th scope="row"><%= item.column %></th>
+                            <td class="text-end"><%= item.valueA.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                            <td class="text-end"><%= item.valueB.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                            <td class="text-end <%= Math.abs(item.difference) > 0.01 ? 'text-danger' : '' %>">
+                                <%= item.difference.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                            </td>
+                        </tr>
+                    <% }); %>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Données variables -->
+        <h5 class="text-primary mb-3">Écarts des données variables</h5>
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped">
+                <thead class="table-dark">
+                    <tr>
+                        <th scope="col">Rubrique</th>
+                        <th scope="col">Fichier prestataire paie</th>
+                        <th scope="col">Fichier SEGUCE</th>
+                        <th scope="col">Différence</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% comparisonData.totals.sumComparison.variable.forEach(item => { %>
+                        <tr>
+                            <th scope="row"><%= item.column %></th>
+                            <td class="text-end"><%= item.valueA.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                            <td class="text-end"><%= item.valueB.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                            <td class="text-end <%= Math.abs(item.difference) > 0.01 ? 'text-danger' : '' %>">
+                                <%= item.difference.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                            </td>
+                        </tr>
+                    <% }); %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<% } %>
+ <!-- NOUVEAU -->
+
+
+
         <div class="card shadow mb-4">
             <div class="card-header bg-primary text-white">
                 <h4 class="card-title mb-0">Résumé des différences</h4>

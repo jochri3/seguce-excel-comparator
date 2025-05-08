@@ -28,7 +28,7 @@ const parseExcelFile = (filePath) => {
     const data = [];
     const formulas = {};
     const headers = [];
-    const sums = {}; // Structure pour stocker les sommes
+    const totals = {}; // Stockera les totaux (dernière ligne)
 
     // D'abord, détecter la ligne d'en-tête
     let headerRow = 0;
@@ -60,58 +60,8 @@ const parseExcelFile = (filePath) => {
       headers.push(cell ? cell.v : `Col${c}`);
     }
 
-    // Déterminer la dernière ligne de données (avant les lignes de somme)
-    let dataEndRow = range.e.r;
-
-    // Parcourir du bas vers le haut pour trouver les lignes de somme
-    // Typiquement, les lignes de somme sont celles qui n'ont pas de matricule
-    // ou qui ont des libellés comme "Total", "Somme", etc.
-    for (let r = range.e.r; r > headerRow + 1; r--) {
-      const cellA = worksheet[XLSX.utils.encode_cell({ r, c: range.s.c })];
-
-      // Si la première cellule est vide ou contient un terme comme "Total"
-      if (
-        !cellA ||
-        (cellA.t === "s" &&
-          (cellA.v.toLowerCase().includes("total") ||
-            cellA.v.toLowerCase().includes("somme")))
-      ) {
-        // Cette ligne pourrait contenir des sommes
-        const sumRow = {};
-        let hasData = false;
-
-        // Parcourir toutes les colonnes de cette ligne
-        for (let c = range.s.c; c <= range.e.c; c++) {
-          const cellAddress = XLSX.utils.encode_cell({ r, c });
-          const cell = worksheet[cellAddress];
-          const header = headers[c - range.s.c];
-
-          if (
-            cell &&
-            (typeof cell.v === "number" ||
-              (typeof cell.v === "string" && !isNaN(parseFloat(cell.v))))
-          ) {
-            // C'est une valeur numérique, donc probablement une somme
-            sumRow[header] =
-              typeof cell.v === "number" ? cell.v : parseFloat(cell.v);
-            hasData = true;
-          } else if (cell && cell.t === "s") {
-            // Stocker aussi le libellé de la ligne
-            sumRow["_label"] = cell.v;
-          }
-        }
-
-        if (hasData) {
-          // Si cette ligne contient des valeurs numériques, l'ajouter aux sommes
-          const label =
-            sumRow["_label"] || `Sum${Object.keys(sums).length + 1}`;
-          sums[label] = sumRow;
-        }
-      }
-    }
-
-    // MODIFICATION: Extraction des données complètes à partir de la ligne après l'en-tête
-    for (let r = headerRow + 1; r <= range.e.r; r++) {
+    // Extraction des données normales (toutes les lignes sauf la dernière)
+    for (let r = headerRow + 1; r < range.e.r; r++) {
       const row = {};
       const rowFormulas = {};
       let hasFormulas = false;
@@ -148,12 +98,38 @@ const parseExcelFile = (filePath) => {
       }
     }
 
+    // Extraire spécifiquement la dernière ligne comme totaux
+    const lastRow = range.e.r;
+    for (let c = range.s.c; c <= range.e.c; c++) {
+      const cellAddress = XLSX.utils.encode_cell({ r: lastRow, c });
+      const cell = worksheet[cellAddress];
+      const headerIndex = c - range.s.c;
+
+      if (headerIndex >= 0 && headerIndex < headers.length) {
+        const header = headers[headerIndex];
+
+        if (cell) {
+          // Convertir la valeur en nombre si possible
+          if (typeof cell.v === "number") {
+            totals[header] = cell.v;
+          } else if (
+            typeof cell.v === "string" &&
+            !isNaN(parseFloat(cell.v.replace(",", ".").replace(/\s/g, "")))
+          ) {
+            totals[header] = parseFloat(
+              cell.v.replace(",", ".").replace(/\s/g, "")
+            );
+          }
+        }
+      }
+    }
+
     return {
       sheetName: sheetNames[0],
       headers: headers.map((h) => ({ key: h, value: h })),
       data,
       formulas,
-      sums,
+      totals, // Ajout des totaux au résultat
       rawWorksheet: worksheet,
     };
   } catch (error) {
@@ -275,30 +251,29 @@ const compareExcelData = (fileAData, fileBData) => {
           totalColumns: 0,
           columnsWithErrors: [],
           totalErrors: 0,
-        },
+        }
       },
-      sumComparison: {
-        // Nouveau: Comparaison des sommes
+      totals: {
+        // Nouveau: comparaison des totaux par catégorie
         fixed: [],
         variable: [],
         onlyInA: [],
-        onlyInB: [],
-      },
+        onlyInB: []
+      }
     },
     details: [],
     headers: {
       fileA: fileAData.headers,
       fileB: fileBData.headers,
     },
-    sums: {
-      // Nouveau: Les sommes extraites
-      fileA: fileAData.sums || {},
-      fileB: fileBData.sums || {},
-    },
+    totals: {
+      fileA: fileAData.totals || {},
+      fileB: fileBData.totals || {}
+    }
   };
 
   console.log(
-    `Comparaison: Fichier Fournisseur a ${fileAData.data.length} lignes, Fichier SEGUCE RDC a ${fileBData.data.length} lignes`
+    `Comparaison: Fichier Fournisseur a ${fileAData.data.length} lignes, Fichier SEGUCE RDC a ${fileBData.data.length} lignes`,
   );
 
   // Si un des fichiers est vide, sortir
@@ -331,9 +306,7 @@ const compareExcelData = (fileAData, fileBData) => {
     for (const idCol of possibleIdColumns) {
       if (normalizedName.includes(idCol)) {
         idColumnA = header.key;
-        console.log(
-          `Colonne d'ID trouvée dans Fichier Fournisseur: "${idColumnA}"`
-        );
+        console.log(`Colonne d'ID trouvée dans Fichier Fournisseur: "${idColumnA}"`);
         break;
       }
     }
@@ -346,9 +319,7 @@ const compareExcelData = (fileAData, fileBData) => {
     for (const idCol of possibleIdColumns) {
       if (normalizedName.includes(idCol)) {
         idColumnB = header.key;
-        console.log(
-          `Colonne d'ID trouvée dans Fichier SEGUCE RDC: "${idColumnB}"`
-        );
+        console.log(`Colonne d'ID trouvée dans Fichier SEGUCE RDC: "${idColumnB}"`);
         break;
       }
     }
@@ -359,20 +330,20 @@ const compareExcelData = (fileAData, fileBData) => {
   if (!idColumnA && fileAData.headers.length > 0) {
     idColumnA = fileAData.headers[0].key;
     console.log(
-      `Aucune colonne d'ID trouvée dans Fichier Fournisseur, utilisation de la première colonne: "${idColumnA}"`
+      `Aucune colonne d'ID trouvée dans Fichier Fournisseur, utilisation de la première colonne: "${idColumnA}"`,
     );
   }
 
   if (!idColumnB && fileBData.headers.length > 0) {
     idColumnB = fileBData.headers[0].key;
     console.log(
-      `Aucune colonne d'ID trouvée dans Fichier SEGUCE RDC, utilisation de la première colonne: "${idColumnB}"`
+      `Aucune colonne d'ID trouvée dans Fichier SEGUCE RDC, utilisation de la première colonne: "${idColumnB}"`,
     );
   }
 
   if (!idColumnA || !idColumnB) {
     throw new Error(
-      "Impossible de trouver une colonne d'identifiant dans l'un des fichiers"
+      "Impossible de trouver une colonne d'identifiant dans l'un des fichiers",
     );
   }
 
@@ -399,21 +370,21 @@ const compareExcelData = (fileAData, fileBData) => {
 
   // Obtenir les colonnes communes et les colonnes manquantes
   const commonColumns = Object.keys(columnMapping).filter(
-    (col) => col !== idColumnA
+    (col) => col !== idColumnA,
   );
 
   const missingInA = Array.from(columnsB).filter(
     (colB) =>
       !Array.from(columnsA).some(
-        (colA) => normalizeColumnName(colA) === normalizeColumnName(colB)
-      )
+        (colA) => normalizeColumnName(colA) === normalizeColumnName(colB),
+      ),
   );
 
   const missingInB = Array.from(columnsA).filter(
     (colA) =>
       !Array.from(columnsB).some(
-        (colB) => normalizeColumnName(colA) === normalizeColumnName(colB)
-      )
+        (colB) => normalizeColumnName(colA) === normalizeColumnName(colB),
+      ),
   );
 
   // Mettre à jour les statistiques
@@ -424,30 +395,18 @@ const compareExcelData = (fileAData, fileBData) => {
   // Classifier les colonnes
   const { fixedColumns, variableColumns } = classifyColumns(commonColumns);
 
-  // Comparer les sommes des deux fichiers
-  compareColumnSums(
-    results,
-    fileAData,
-    fileBData,
-    fixedColumns,
-    variableColumns
-  );
-
   // Mettre à jour les totaux des colonnes dans sequentialComparison
-  results.summary.sequentialComparison.fixedElements.totalColumns =
-    fixedColumns.length;
-  results.summary.sequentialComparison.variableElements.totalColumns =
-    variableColumns.length;
+  results.summary.sequentialComparison.fixedElements.totalColumns = fixedColumns.length;
+  results.summary.sequentialComparison.variableElements.totalColumns = variableColumns.length;
+
+  // Ajouter: Comparer les totaux des deux fichiers
+  compareTotals(results, fixedColumns, variableColumns);
 
   console.log(`Éléments fixes détectés: ${fixedColumns.length}`);
   console.log(`Éléments variables détectés: ${variableColumns.length}`);
   console.log(`${commonColumns.length} colonnes communes trouvées`);
-  console.log(
-    `${missingInA.length} colonnes présentes uniquement dans SEGUCE RDC`
-  );
-  console.log(
-    `${missingInB.length} colonnes présentes uniquement dans Fichier Fournisseur`
-  );
+  console.log(`${missingInA.length} colonnes présentes uniquement dans SEGUCE RDC`);
+  console.log(`${missingInB.length} colonnes présentes uniquement dans Fichier Fournisseur`);
 
   // Détection des doublons de matricules
   const detectDuplicates = (data, idColumn, fileLabel) => {
@@ -471,7 +430,7 @@ const compareExcelData = (fileAData, fileBData) => {
           count,
           rows: data
             .map((row, index) =>
-              String(row[idColumn]).trim() === matricule ? index + 1 : null
+              String(row[idColumn]).trim() === matricule ? index + 1 : null,
             )
             .filter((i) => i !== null),
         });
@@ -625,7 +584,7 @@ const compareExcelData = (fileAData, fileBData) => {
           // Ajouter les colonnes avec différences au résumé
           rowDifferences.forEach((diff) => {
             const existingColDiff = results.summary.columnDifferences.find(
-              (c) => c.column === diff.column
+              (c) => c.column === diff.column,
             );
 
             if (existingColDiff) {
@@ -667,7 +626,7 @@ const compareExcelData = (fileAData, fileBData) => {
   matriculesB.forEach((idValue) => {
     if (!matriculesA.has(idValue)) {
       const rowB = fileBData.data.find(
-        (row) => String(row[idColumnB]).trim() === idValue
+        (row) => String(row[idColumnB]).trim() === idValue,
       );
       if (rowB) {
         results.summary.totalDifferences++;
@@ -681,7 +640,7 @@ const compareExcelData = (fileAData, fileBData) => {
   });
 
   console.log(
-    `Analyse terminée: ${results.summary.totalDifferences} différences trouvées`
+    `Analyse terminée: ${results.summary.totalDifferences} différences trouvées`,
   );
 
   return results;
@@ -975,6 +934,188 @@ const compareColumnSums = (
   });
 };
 
+
+
+// Nouvelle fonction pour comparer les totaux
+const compareTotals = (results, fixedColumns, variableColumns) => {
+  const totalsA = results.totals.fileA;
+  const totalsB = results.totals.fileB;
+
+  // Définir les catégories et leurs colonnes
+  const categories = {
+    chargesSalariales: ["Cnss QPO", "IPR"],
+    chargesPatronales: ["Cnss QPP", "Inpp", "Onem"],
+    coutsSalaires: [
+      "Coût Salarial",
+      "Masse Salariale",
+      "Net à Payer",
+      "Frais de Services",
+      "TVA 16% Frais Services",
+      "Total Employeur Mensuel",
+    ],
+  };
+
+  // Structure pour stocker les résultats par catégorie
+  results.summary.chargesCategories = {
+    chargesSalariales: {
+      items: [],
+      totalA: 0,
+      totalB: 0,
+      difference: 0,
+    },
+    chargesPatronales: {
+      items: [],
+      totalA: 0,
+      totalB: 0,
+      difference: 0,
+    },
+    coutsSalaires: {
+      items: [],
+      totalA: 0,
+      totalB: 0,
+      difference: 0,
+    },
+    autresColonnes: [], // Pour les colonnes qui ne rentrent dans aucune catégorie
+  };
+
+  // Parcourir toutes les colonnes connues
+  Object.keys(totalsA).forEach((column) => {
+    // Vérifier si cette colonne a une valeur dans totalsB
+    const valueA = totalsA[column] || 0;
+    const valueB = totalsB[column] || 0;
+    const difference = valueA - valueB;
+
+    // Déterminer la catégorie
+    let categoryFound = false;
+
+    for (const [category, columns] of Object.entries(categories)) {
+      if (columns.includes(column)) {
+        // Ajouter à la catégorie correspondante
+        results.summary.chargesCategories[category].items.push({
+          column,
+          valueA,
+          valueB,
+          difference,
+        });
+
+        // Mettre à jour les totaux de la catégorie
+        results.summary.chargesCategories[category].totalA += valueA;
+        results.summary.chargesCategories[category].totalB += valueB;
+        results.summary.chargesCategories[category].difference += difference;
+
+        categoryFound = true;
+        break;
+      }
+    }
+
+    // Si aucune catégorie trouvée, ajouter aux autres colonnes
+    if (!categoryFound) {
+      // Mais seulement si la colonne est aussi dans totalsB
+      if (totalsB[column] !== undefined) {
+        results.summary.chargesCategories.autresColonnes.push({
+          column,
+          valueA,
+          valueB,
+          difference,
+        });
+      }
+    }
+  });
+
+  // Également traiter les colonnes qui sont uniquement dans totalsB
+  Object.keys(totalsB).forEach((column) => {
+    if (totalsA[column] === undefined) {
+      // Déterminer la catégorie
+      let categoryFound = false;
+
+      for (const [category, columns] of Object.entries(categories)) {
+        if (columns.includes(column)) {
+          // Ajouter à la catégorie correspondante
+          results.summary.chargesCategories[category].items.push({
+            column,
+            valueA: 0,
+            valueB: totalsB[column],
+            difference: -totalsB[column],
+          });
+
+          // Mettre à jour les totaux de la catégorie
+          results.summary.chargesCategories[category].totalB += totalsB[column];
+          results.summary.chargesCategories[category].difference -=
+            totalsB[column];
+
+          categoryFound = true;
+          break;
+        }
+      }
+
+      // Si aucune catégorie trouvée, ajouter aux autres colonnes
+      if (!categoryFound) {
+        results.summary.chargesCategories.autresColonnes.push({
+          column,
+          valueA: 0,
+          valueB: totalsB[column],
+          difference: -totalsB[column],
+        });
+      }
+    }
+  });
+
+  const allColumns = [...fixedColumns, ...variableColumns];
+
+  // Comparer les totaux pour toutes les colonnes communes
+  allColumns.forEach((column) => {
+    // Vérifier si la colonne existe dans les deux fichiers
+    if (totalsA[column] !== undefined && totalsB[column] !== undefined) {
+      const valueA = totalsA[column];
+      const valueB = totalsB[column];
+      const difference = valueA - valueB;
+
+      // Déterminer si c'est une colonne fixe ou variable
+      const isFixed = fixedColumns.includes(column);
+      const category = isFixed ? "fixed" : "variable";
+
+      // Ajouter à la catégorie appropriée
+      results.summary.totals[category].push({
+        column,
+        valueA,
+        valueB,
+        difference,
+      });
+    }
+    // Colonnes présentes uniquement dans un des fichiers
+    else if (totalsA[column] !== undefined) {
+      results.summary.totals.onlyInA.push({
+        column,
+        value: totalsA[column],
+      });
+    } else if (totalsB[column] !== undefined) {
+      results.summary.totals.onlyInB.push({
+        column,
+        value: totalsB[column],
+      });
+    }
+  });
+
+  // Vérifier les colonnes qui ne sont pas dans allColumns
+  Object.keys(totalsA).forEach((column) => {
+    if (!allColumns.includes(column) && totalsA[column] !== undefined) {
+      results.summary.totals.onlyInA.push({
+        column,
+        value: totalsA[column],
+      });
+    }
+  });
+
+  Object.keys(totalsB).forEach((column) => {
+    if (!allColumns.includes(column) && totalsB[column] !== undefined) {
+      results.summary.totals.onlyInB.push({
+        column,
+        value: totalsB[column],
+      });
+    }
+  });
+};
+
 module.exports = {
   parseExcelFile,
   compareExcelData,
@@ -982,4 +1123,5 @@ module.exports = {
   detectProviderType,
   classifyColumns,
   compareColumnSums,
+  compareTotals,
 };

@@ -1023,6 +1023,17 @@ app.get(
       const data = JSON.parse(fileData.data);
       const formulas = JSON.parse(fileData.formulas || "{}");
 
+      // Extraire les totaux (dernière ligne ou données spécifiques)
+      let totals = {};
+      if (data.length > 0) {
+        // On considère la dernière ligne comme les totaux
+        const lastRowIndex = data.length - 1;
+        totals = { ...data[lastRowIndex] };
+
+        // Nous supprimons la dernière ligne des données normales, car elle sera affichée comme totaux
+        data.pop();
+      }
+
       // Déterminer le label du fichier
       const fileLabel =
         fileType === "fileA" ? "Fichier Fournisseur" : "Fichier SEGUCE RDC";
@@ -1037,6 +1048,7 @@ app.get(
           createdBy: fileData.created_by,
           data: data,
           formulas: formulas,
+          totals: totals, // Ajout des totaux
         },
         sessionId,
         fileLabel,
@@ -1102,6 +1114,9 @@ app.get("/history/view-comparison/:sessionId/:version", async (req, res) => {
     // Convertir les données JSON en objets
     const details = JSON.parse(comparisonData.details);
     const columnDifferences = JSON.parse(comparisonData.column_differences);
+    const totals = comparisonData.totals
+      ? JSON.parse(comparisonData.totals)
+      : null;
 
     res.render("view-comparison", {
       title: `Résultats de comparaison - ${sessionId} (v${version})`,
@@ -1110,6 +1125,7 @@ app.get("/history/view-comparison/:sessionId/:version", async (req, res) => {
         totalDifferences: comparisonData.total_differences,
         columnDifferences: columnDifferences,
         details: details,
+        totals: totals,
         createdAt: comparisonData.created_at,
       },
       files: {
