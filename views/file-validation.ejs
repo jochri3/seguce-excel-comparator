@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <%- include('partials/header') %>
+    <title><%= title %></title>
+</head>
+<body>
+    <div class="container">
+        <div class="card shadow mt-5">
+            <div class="card-header bg-warning text-dark">
+                <h4 class="card-title mb-0"><i class="bi bi-exclamation-triangle-fill me-2"></i>Vérification des fichiers</h4>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <p><strong>Attention :</strong> Il semble que vous ayez uploadé les fichiers aux mauvais emplacements.</p>
+                    
+                    <% if (!fileAIsProvider) { %>
+                        <p>Le fichier "<%= fileAName %>" ne semble pas être un fichier fournisseur mais plutôt un fichier SEGUCE.</p>
+                    <% } %>
+                    
+                    <% if (!fileBIsSeguce) { %>
+                        <p>Le fichier "<%= fileBName %>" ne semble pas être un fichier SEGUCE mais plutôt un fichier fournisseur.</p>
+                    <% } %>
+                    
+                    <p>Souhaitez-vous tout de même continuer ?</p>
+                </div>
+                
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="/" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left me-2"></i>Annuler et revenir à l'accueil
+                    </a>
+                    <form action="/compare-confirmed" method="POST">
+                        <input type="hidden" name="fileAPath" value="<%= fileAPath %>">
+                        <input type="hidden" name="fileBPath" value="<%= fileBPath %>">
+                        <input type="hidden" name="fileAName" value="<%= fileAName %>">
+                        <input type="hidden" name="fileBName" value="<%= fileBName %>">
+                        <button type="submit" class="btn btn-warning">
+                            <i class="bi bi-check-circle me-2"></i>Continuer quand même
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    <%- include('partials/footer') %>
+</body>
+</html>

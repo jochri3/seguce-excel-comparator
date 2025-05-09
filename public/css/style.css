@@ -315,3 +315,35 @@ body {
     background-color: #218838;
     border-color: #1e7e34;
 }
+
+
+/* Style pour le bouton flottant de défilement */
+.scroll-top-btn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background-color: #0859c6;
+    color: white;
+    text-align: center;
+    line-height: 50px;
+    font-size: 20px;
+    cursor: pointer;
+    z-index: 1000;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+}
+
+.scroll-top-btn:hover {
+    background-color: #074aa9;
+}
+
+.scroll-top-btn.down .bi-arrow-up {
+    display: none;
+}
+
+.scroll-top-btn.up .bi-arrow-down {
+    display: none;
+}

@@ -251,15 +251,15 @@ const compareExcelData = (fileAData, fileBData) => {
           totalColumns: 0,
           columnsWithErrors: [],
           totalErrors: 0,
-        }
+        },
       },
       totals: {
         // Nouveau: comparaison des totaux par catégorie
         fixed: [],
         variable: [],
         onlyInA: [],
-        onlyInB: []
-      }
+        onlyInB: [],
+      },
     },
     details: [],
     headers: {
@@ -268,12 +268,12 @@ const compareExcelData = (fileAData, fileBData) => {
     },
     totals: {
       fileA: fileAData.totals || {},
-      fileB: fileBData.totals || {}
-    }
+      fileB: fileBData.totals || {},
+    },
   };
 
   console.log(
-    `Comparaison: Fichier Fournisseur a ${fileAData.data.length} lignes, Fichier SEGUCE RDC a ${fileBData.data.length} lignes`,
+    `Comparaison: Fichier Fournisseur a ${fileAData.data.length} lignes, Fichier SEGUCE a ${fileBData.data.length} lignes`
   );
 
   // Si un des fichiers est vide, sortir
@@ -306,7 +306,9 @@ const compareExcelData = (fileAData, fileBData) => {
     for (const idCol of possibleIdColumns) {
       if (normalizedName.includes(idCol)) {
         idColumnA = header.key;
-        console.log(`Colonne d'ID trouvée dans Fichier Fournisseur: "${idColumnA}"`);
+        console.log(
+          `Colonne d'ID trouvée dans Fichier Fournisseur: "${idColumnA}"`
+        );
         break;
       }
     }
@@ -319,7 +321,7 @@ const compareExcelData = (fileAData, fileBData) => {
     for (const idCol of possibleIdColumns) {
       if (normalizedName.includes(idCol)) {
         idColumnB = header.key;
-        console.log(`Colonne d'ID trouvée dans Fichier SEGUCE RDC: "${idColumnB}"`);
+        console.log(`Colonne d'ID trouvée dans Fichier SEGUCE: "${idColumnB}"`);
         break;
       }
     }
@@ -330,20 +332,20 @@ const compareExcelData = (fileAData, fileBData) => {
   if (!idColumnA && fileAData.headers.length > 0) {
     idColumnA = fileAData.headers[0].key;
     console.log(
-      `Aucune colonne d'ID trouvée dans Fichier Fournisseur, utilisation de la première colonne: "${idColumnA}"`,
+      `Aucune colonne d'ID trouvée dans Fichier Fournisseur, utilisation de la première colonne: "${idColumnA}"`
     );
   }
 
   if (!idColumnB && fileBData.headers.length > 0) {
     idColumnB = fileBData.headers[0].key;
     console.log(
-      `Aucune colonne d'ID trouvée dans Fichier SEGUCE RDC, utilisation de la première colonne: "${idColumnB}"`,
+      `Aucune colonne d'ID trouvée dans Fichier SEGUCE, utilisation de la première colonne: "${idColumnB}"`
     );
   }
 
   if (!idColumnA || !idColumnB) {
     throw new Error(
-      "Impossible de trouver une colonne d'identifiant dans l'un des fichiers",
+      "Impossible de trouver une colonne d'identifiant dans l'un des fichiers"
     );
   }
 
@@ -370,21 +372,21 @@ const compareExcelData = (fileAData, fileBData) => {
 
   // Obtenir les colonnes communes et les colonnes manquantes
   const commonColumns = Object.keys(columnMapping).filter(
-    (col) => col !== idColumnA,
+    (col) => col !== idColumnA
   );
 
   const missingInA = Array.from(columnsB).filter(
     (colB) =>
       !Array.from(columnsA).some(
-        (colA) => normalizeColumnName(colA) === normalizeColumnName(colB),
-      ),
+        (colA) => normalizeColumnName(colA) === normalizeColumnName(colB)
+      )
   );
 
   const missingInB = Array.from(columnsA).filter(
     (colA) =>
       !Array.from(columnsB).some(
-        (colB) => normalizeColumnName(colA) === normalizeColumnName(colB),
-      ),
+        (colB) => normalizeColumnName(colA) === normalizeColumnName(colB)
+      )
   );
 
   // Mettre à jour les statistiques
@@ -396,8 +398,10 @@ const compareExcelData = (fileAData, fileBData) => {
   const { fixedColumns, variableColumns } = classifyColumns(commonColumns);
 
   // Mettre à jour les totaux des colonnes dans sequentialComparison
-  results.summary.sequentialComparison.fixedElements.totalColumns = fixedColumns.length;
-  results.summary.sequentialComparison.variableElements.totalColumns = variableColumns.length;
+  results.summary.sequentialComparison.fixedElements.totalColumns =
+    fixedColumns.length;
+  results.summary.sequentialComparison.variableElements.totalColumns =
+    variableColumns.length;
 
   // Ajouter: Comparer les totaux des deux fichiers
   compareTotals(results, fixedColumns, variableColumns);
@@ -405,8 +409,10 @@ const compareExcelData = (fileAData, fileBData) => {
   console.log(`Éléments fixes détectés: ${fixedColumns.length}`);
   console.log(`Éléments variables détectés: ${variableColumns.length}`);
   console.log(`${commonColumns.length} colonnes communes trouvées`);
-  console.log(`${missingInA.length} colonnes présentes uniquement dans SEGUCE RDC`);
-  console.log(`${missingInB.length} colonnes présentes uniquement dans Fichier Fournisseur`);
+  console.log(`${missingInA.length} colonnes présentes uniquement dans SEGUCE`);
+  console.log(
+    `${missingInB.length} colonnes présentes uniquement dans Fichier Fournisseur`
+  );
 
   // Détection des doublons de matricules
   const detectDuplicates = (data, idColumn, fileLabel) => {
@@ -430,7 +436,7 @@ const compareExcelData = (fileAData, fileBData) => {
           count,
           rows: data
             .map((row, index) =>
-              String(row[idColumn]).trim() === matricule ? index + 1 : null,
+              String(row[idColumn]).trim() === matricule ? index + 1 : null
             )
             .filter((i) => i !== null),
         });
@@ -584,7 +590,7 @@ const compareExcelData = (fileAData, fileBData) => {
           // Ajouter les colonnes avec différences au résumé
           rowDifferences.forEach((diff) => {
             const existingColDiff = results.summary.columnDifferences.find(
-              (c) => c.column === diff.column,
+              (c) => c.column === diff.column
             );
 
             if (existingColDiff) {
@@ -626,7 +632,7 @@ const compareExcelData = (fileAData, fileBData) => {
   matriculesB.forEach((idValue) => {
     if (!matriculesA.has(idValue)) {
       const rowB = fileBData.data.find(
-        (row) => String(row[idColumnB]).trim() === idValue,
+        (row) => String(row[idColumnB]).trim() === idValue
       );
       if (rowB) {
         results.summary.totalDifferences++;
@@ -640,7 +646,7 @@ const compareExcelData = (fileAData, fileBData) => {
   });
 
   console.log(
-    `Analyse terminée: ${results.summary.totalDifferences} différences trouvées`,
+    `Analyse terminée: ${results.summary.totalDifferences} différences trouvées`
   );
 
   return results;
@@ -934,8 +940,6 @@ const compareColumnSums = (
   });
 };
 
-
-
 // Nouvelle fonction pour comparer les totaux
 const compareTotals = (results, fixedColumns, variableColumns) => {
   const totalsA = results.totals.fileA;
@@ -1116,12 +1120,211 @@ const compareTotals = (results, fixedColumns, variableColumns) => {
   });
 };
 
+// Fonction à ajouter/modifier dans utils/excel-parser.js
+
+/**
+ * Extrait les informations du nom de fichier (date et nom du fournisseur)
+ * Format attendu: fichier_FOURNISSEUR_MM_YYYY.xlsx ou FICHIER_SEGUCE_MM_YYYY.xlsx
+ */
+const extractInfoFromFilename = (filename) => {
+  // Ancien regex qui extrayait uniquement la date
+  // const match = filename.match(/(\d{2})_(\d{4})/);
+
+  // Nouveau regex qui extrait à la fois la date et le nom du fournisseur
+  const match = filename
+    .toLowerCase()
+    .match(/fichier_([a-z0-9]+)_(\d{2})_(\d{4})/i);
+
+  if (!match) {
+    return null;
+  }
+
+  const providerName = match[1].toUpperCase();
+  const month = parseInt(match[2], 10);
+  const year = parseInt(match[3], 10);
+
+  return {
+    month,
+    year,
+    providerName: providerName === "SEGUCE" ? "SEGUCE" : providerName,
+  };
+};
+
+/**
+ * Valide si le fichier est un fichier SEGUCE
+ */
+const isSegucefile = (filename) => {
+  return filename.toLowerCase().includes("seguce");
+};
+
+/**
+ * Valide si le fichier est un fichier fournisseur (non-SEGUCE)
+ */
+const isProviderFile = (filename) => {
+  const match = filename
+    .toLowerCase()
+    .match(/fichier_([a-z0-9]+)_(\d{2})_(\d{4})/i);
+  return match && match[1].toUpperCase() !== "SEGUCE";
+};
+
+/**
+ * Détecte les colonnes dupliquées dans un ensemble de données
+ */
+const detectDuplicateColumns = (headers) => {
+  const counts = {};
+  const duplicates = [];
+
+  headers.forEach((header) => {
+    const name = header.key;
+    counts[name] = (counts[name] || 0) + 1;
+
+    if (counts[name] > 1) {
+      duplicates.push(name);
+    }
+  });
+
+  return [...new Set(duplicates)]; // Renvoyer un tableau sans doublons
+};
+
+/**
+ * Compare deux versions d'un fichier pour identifier les différences
+ */
+const compareFileVersions = (data1, data2) => {
+  const differences = [];
+  const allMatricules = new Set();
+
+  // Collecter tous les matricules uniques des deux versions
+  data1.forEach((row) => {
+    if (row.Matricule) allMatricules.add(String(row.Matricule).trim());
+  });
+
+  data2.forEach((row) => {
+    if (row.Matricule) allMatricules.add(String(row.Matricule).trim());
+  });
+
+  // Classifier les colonnes
+  const allColumns = new Set();
+  data1.forEach((row) =>
+    Object.keys(row).forEach((col) => allColumns.add(col))
+  );
+  data2.forEach((row) =>
+    Object.keys(row).forEach((col) => allColumns.add(col))
+  );
+
+  const { fixedColumns, variableColumns } = classifyColumns(
+    Array.from(allColumns)
+  );
+
+  // Analyser les différences matricule par matricule
+  let totalDifferences = 0;
+
+  allMatricules.forEach((matricule) => {
+    const row1 = data1.find((r) => String(r.Matricule).trim() === matricule);
+    const row2 = data2.find((r) => String(r.Matricule).trim() === matricule);
+
+    if (!row1 && row2) {
+      // Matricule ajouté dans la version 2
+      differences.push({
+        matricule,
+        type: "added",
+        message: `Matricule ajouté dans la nouvelle version`,
+        details: row2,
+      });
+      totalDifferences++;
+    } else if (row1 && !row2) {
+      // Matricule supprimé dans la version 2
+      differences.push({
+        matricule,
+        type: "removed",
+        message: `Matricule supprimé dans la nouvelle version`,
+        details: row1,
+      });
+      totalDifferences++;
+    } else if (row1 && row2) {
+      // Comparer les valeurs des colonnes
+      const columnDiffs = [];
+      const allColumnsForRow = new Set([
+        ...Object.keys(row1),
+        ...Object.keys(row2),
+      ]);
+
+      allColumnsForRow.forEach((column) => {
+        if (column === "Matricule") return; // Ignorer la colonne Matricule
+
+        const val1 = row1[column];
+        const val2 = row2[column];
+
+        // Si la colonne existe dans les deux versions et les valeurs sont différentes
+        if (!areValuesEqual(val1, val2)) {
+          // Déterminer le type de colonne (fixe ou variable)
+          const columnType = fixedColumns.includes(column)
+            ? "fixe"
+            : "variable";
+
+          // Calculer la différence pour les valeurs numériques
+          let difference = "Modifié";
+          if (typeof val1 === "number" && typeof val2 === "number") {
+            const diff = val2 - val1;
+            difference = diff > 0 ? `+${diff.toFixed(2)}` : diff.toFixed(2);
+          }
+
+          columnDiffs.push({
+            column,
+            oldValue: val1,
+            newValue: val2,
+            difference,
+            type: columnType,
+          });
+
+          totalDifferences++;
+        }
+      });
+
+      // Ajouter seulement s'il y a des différences
+      if (columnDiffs.length > 0) {
+        // Grouper les différences par type
+        const fixedChanges = columnDiffs.filter((diff) => diff.type === "fixe");
+        const variableChanges = columnDiffs.filter(
+          (diff) => diff.type === "variable"
+        );
+
+        differences.push({
+          matricule,
+          type: "modified",
+          fixedChanges,
+          variableChanges,
+          totalChanges: columnDiffs.length,
+        });
+      }
+    }
+  });
+
+  return {
+    differences,
+    totalDifferences,
+    matriculeCount: allMatricules.size,
+  };
+};
+// module.exports = {
+//   parseExcelFile,
+//   compareExcelData,
+//   extractDateFromFilename,
+//   detectProviderType,
+//   classifyColumns,
+//   compareColumnSums,
+//   compareTotals,
+// };
 module.exports = {
   parseExcelFile,
   compareExcelData,
-  extractDateFromFilename,
+  extractDateFromFilename: extractInfoFromFilename, // Gardez ce nom pour la compatibilité
+  extractInfoFromFilename, // Nouvelle fonction
   detectProviderType,
   classifyColumns,
   compareColumnSums,
   compareTotals,
+  isSegucefile,
+  isProviderFile,
+  detectDuplicateColumns,
+  compareFileVersions,
 };

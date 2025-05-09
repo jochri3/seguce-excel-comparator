@@ -658,6 +658,54 @@ const exportToExcelWithFormulas = (
     XLSX.utils.book_append_sheet(workbook, chargesSheet, "Récap charges");
   }
 
+  // Utiliser directement les totaux calculés depuis comparisonResult
+  if (
+    comparisonResult.totals &&
+    comparisonResult.totals.fileA &&
+    comparisonResult.totals.fileB
+  ) {
+    // Ajouter une feuille pour les totaux
+    const totalsData = [
+      ["Récapitulatif des totaux"],
+      [],
+      [
+        "Rubrique",
+        "Fichier " + (providerName || "Fournisseur"),
+        "Fichier SEGUCE",
+        "Différence",
+        "Différence %",
+      ],
+    ];
+
+    // Rassembler toutes les clés de totaux
+    const allTotalKeys = [
+      ...new Set([
+        ...Object.keys(comparisonResult.totals.fileA),
+        ...Object.keys(comparisonResult.totals.fileB),
+      ]),
+    ];
+
+    // Ajouter chaque rubrique de total
+    allTotalKeys.sort().forEach((key) => {
+      const totalA = comparisonResult.totals.fileA[key] || 0;
+      const totalB = comparisonResult.totals.fileB[key] || 0;
+      const diff = totalB - totalA;
+      const percentDiff =
+        totalA !== 0 ? (Math.abs(diff) / Math.abs(totalA)) * 100 : 100;
+
+      totalsData.push([
+        key,
+        totalA,
+        totalB,
+        diff,
+        `${percentDiff.toFixed(2)}%`,
+      ]);
+    });
+
+    const totalsSheet = XLSX.utils.aoa_to_sheet(totalsData);
+    XLSX.utils.book_append_sheet(workbook, totalsSheet, "Récapitulatif Totaux");
+  }
+
   // Convertir le classeur en buffer
   const excelBuffer = XLSX.write(workbook, {
     type: "buffer",

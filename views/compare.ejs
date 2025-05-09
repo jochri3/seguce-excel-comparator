@@ -10,7 +10,7 @@
             <h1><%= title %></h1>
             <p class="lead">Résultats de la réconciliation entre les fichiers</p>
             <div class="d-flex justify-content-center">
-                <span class="badge bg-primary me-2">Fichier Fournisseur: <%= fileAName %></span>
+                <span class="badge bg-primary me-2">Fichier <%= providerName %>: <%= fileAName %></span>
                 <span class="badge bg-secondary">Fichier SEGUCE RDC: <%= fileBName %></span>
             </div>
         </header>
@@ -19,7 +19,7 @@
        <i class="bi bi-exclamation-triangle-fill me-2"></i>
        <strong>Fichier mis à jour !</strong> 
        Les fichiers ont été mis à jour. 
-       <span class="badge bg-warning text-dark ms-2">Fichier Fournisseur: v<%= fileAVersion %></span>
+       <span class="badge bg-warning text-dark ms-2">Fichier <%= providerName %>: v<%= fileAVersion %></span>
        <span class="badge bg-warning text-dark ms-2">Fichier SEGUCE RDC: v<%= fileBVersion %></span>
    </div>
 <% } %>
@@ -45,7 +45,7 @@
                                 <table class="table table-bordered table-striped">
                                 <tbody>
     <tr>
-        <th>Nombre de lignes (Fichier Fournisseur)</th>
+        <th>Nombre de lignes (Fichier <%= providerName %>)</th>
         <td><%= comparisonResult.summary.totalRows.fileA %></td>
     </tr>
     <tr>
@@ -95,7 +95,7 @@
         <thead class="table-dark">
             <tr>
                 <th scope="col">Rubrique</th>
-                <th scope="col">Fichier prestataire paie</th>
+                <th scope="col">Fichier <%= providerName %></th>
                 <th scope="col">Fichier SEGUCE</th>
                 <th scope="col">Différence</th>
             </tr>
@@ -135,7 +135,7 @@
         <thead class="table-dark">
             <tr>
                 <th scope="col">Rubrique</th>
-                <th scope="col">Fichier prestataire paie</th>
+                <th scope="col">Fichier <%= providerName %></th>
                 <th scope="col">Fichier SEGUCE</th>
                 <th scope="col">Différence</th>
             </tr>
@@ -191,7 +191,7 @@
                 %>
                     <tr>
                         <th scope="row"><%= item.column %></th>
-                        <td>Fichier prestataire paie</td>
+                        <td>Fichier <%= providerName %></td>
                         <td class="text-end"><%= item.value.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
                     </tr>
                 <% }); 
@@ -222,7 +222,7 @@
         <thead class="table-dark">
             <tr>
                 <th scope="col">Rubrique</th>
-                <th scope="col">Fichier prestataire paie</th>
+                <th scope="col">Fichier <%= providerName %></th>
                 <th scope="col">Fichier SEGUCE</th>
                 <th scope="col">Différence</th>
             </tr>
@@ -320,7 +320,7 @@
                             <div class="col-md-4">
                                 <div class="card text-center mb-3">
                                     <div class="card-body">
-                                        <h5 class="card-title">Lignes Fichier Fournisseur</h5>
+                                        <h5 class="card-title">Lignes Fichier <%= providerName %></h5>
                                         <h2 class="text-primary"><%= comparisonResult.summary.totalRows.fileA %></h2>
                                     </div>
                                 </div>
@@ -357,7 +357,7 @@
         
         <% if (comparisonResult.summary.columnStats.missingInB.length > 0) { %>
             <div class="mb-2">
-                <h6>Colonnes présentes uniquement dans le Fichier prestataire paie (<%= comparisonResult.summary.columnStats.missingInB.length %>):</h6>
+                <h6>Colonnes présentes uniquement dans le Fichier <%= providerName %> (<%= comparisonResult.summary.columnStats.missingInB.length %>):</h6>
                 <ul class="ps-3">
                     <% comparisonResult.summary.columnStats.missingInB
                         .filter(col => !col.startsWith('Col'))  // Filtrer les colonnes génériques
@@ -377,7 +377,7 @@
     
     <% if (comparisonResult.summary.duplicates.fileA.length > 0) { %>
         <div class="alert alert-danger mb-3">
-            <h5><i class="bi bi-exclamation-triangle-fill me-2"></i>Doublons dans le Fichier Fournisseur</h5>
+            <h5><i class="bi bi-exclamation-triangle-fill me-2"></i>Doublons dans le Fichier <%= providerName %></h5>
             <% comparisonResult.summary.duplicates.fileA.forEach(dup => { %>
                 <div class="mb-2">
                     <strong>Matricule: <%= dup.matricule %></strong>
@@ -400,6 +400,37 @@
             <% }) %>
         </div>
     <% } %>
+<% } %>
+
+<% if (duplicateColumnsA.length > 0 || duplicateColumnsB.length > 0) { %>
+    <div class="alert alert-danger mt-4">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <strong>Attention ! Des colonnes dupliquées ont été détectées dans les fichiers :</strong>
+        
+        <% if (duplicateColumnsA.length > 0) { %>
+            <div class="mt-2">
+                <strong>Fichier <%= providerName %> :</strong> 
+                <ul class="mb-0">
+                    <% duplicateColumnsA.forEach(column => { %>
+                        <li><%= column %></li>
+                    <% }); %>
+                </ul>
+            </div>
+        <% } %>
+        
+        <% if (duplicateColumnsB.length > 0) { %>
+            <div class="mt-2">
+                <strong>Fichier SEGUCE RDC :</strong> 
+                <ul class="mb-0">
+                    <% duplicateColumnsB.forEach(column => { %>
+                        <li><%= column %></li>
+                    <% }); %>
+                </ul>
+            </div>
+        <% } %>
+        
+        <p class="mt-2">Les valeurs des colonnes dupliquées peuvent être différentes, ce qui pourrait affecter la réconciliation.</p>
+    </div>
 <% } %>
                          <!-- Fin ajout -->
 
@@ -538,7 +569,7 @@
                         <div class="d-flex justify-content-between w-100">
                             <span>
                                 <% if (detail.onlyInFileA) { %>
-                                    <span class="badge bg-warning me-2">Uniquement dans Fichier Fournisseur</span>
+                                    <span class="badge bg-warning me-2">Uniquement dans Fichier <%= providerName %></span>
                                 <% } else if (detail.onlyInFileB) { %>
                                     <span class="badge bg-info me-2">Uniquement dans Fichier SEGUCE RDC</span>
                                 <% } else { %>
@@ -554,7 +585,7 @@
                         <% if (detail.onlyInFileA) { %>
                             <div class="alert alert-warning">
                                 <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                                <strong>Cette entrée existe uniquement dans le Fichier Fournisseur</strong>
+                                <strong>Cette entrée existe uniquement dans le Fichier <%= providerName %></strong>
                             </div>
                         <% } else if (detail.onlyInFileB) { %>
                             <div class="alert alert-info">
@@ -592,7 +623,7 @@
                         <thead class="table-danger">
                             <tr>
                                 <th>Colonne</th>
-                                <th>Fichier Fournisseur</th>
+                                <th>Fichier <%= providerName %></th>
                                 <th>Fichier SEGUCE RDC</th>
                                 <th>Différence</th>
                             </tr>
@@ -640,7 +671,7 @@
                         <thead class="table-dark">
                             <tr>
                                 <th>Colonne</th>
-                                <th>Fichier Fournisseur</th>
+                                <th>Fichier <%= providerName %></th>
                                 <th>Fichier SEGUCE RDC</th>
                                 <th>Différence</th>
                             </tr>
@@ -687,7 +718,7 @@
                     <thead class="table-dark">
                         <tr>
                             <th>Colonne</th>
-                            <th>Fichier Fournisseur</th>
+                            <th>Fichier <%= providerName %></th>
                             <th>Fichier SEGUCE RDC</th>
                             <th>Différence</th>
                         </tr>
@@ -745,8 +776,50 @@
             </div>
         </div>
     </div>
+    <div class="scroll-top-btn up" id="scrollBtn">
+    <i class="bi bi-arrow-up"></i>
+    <i class="bi bi-arrow-down"></i>
+</div>
 
     <%- include('partials/footer') %>
+    <script>
+    // Script pour le bouton de défilement
+    document.addEventListener('DOMContentLoaded', function() {
+        const scrollBtn = document.getElementById('scrollBtn');
+        const midPoint = document.body.scrollHeight / 2;
+        
+        // Masquer le bouton par défaut
+        scrollBtn.style.display = 'none';
+        
+        window.addEventListener('scroll', function() {
+            // Afficher le bouton après un certain défilement
+            if (window.scrollY > 300) {
+                scrollBtn.style.display = 'block';
+            } else {
+                scrollBtn.style.display = 'none';
+            }
+            
+            // Changer la direction du bouton selon la position
+            if (window.scrollY < midPoint) {
+                scrollBtn.classList.remove('up');
+                scrollBtn.classList.add('down');
+            } else {
+                scrollBtn.classList.remove('down');
+                scrollBtn.classList.add('up');
+            }
+        });
+        
+        scrollBtn.addEventListener('click', function() {
+            if (scrollBtn.classList.contains('up')) {
+                // Remonter en haut
+                window.scrollTo({top: 0, behavior: 'smooth'});
+            } else {
+                // Défiler jusqu'en bas
+                window.scrollTo({top: document.body.scrollHeight, behavior: 'smooth'});
+            }
+        });
+    });
+</script>
 
     <script>
         // Fonctionnalité d'expansion/réduction des accordéons

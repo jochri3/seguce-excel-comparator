@@ -16,17 +16,19 @@ const initDatabase = () => {
       // Créer les tables si elles n'existent pas
       db.serialize(() => {
         // Table des sessions de réconciliation
+        // Dans la méthode initDatabase, modifier la création de la table sessions
         db.run(`CREATE TABLE IF NOT EXISTS sessions (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          session_id TEXT UNIQUE,
-          month INTEGER,
-          year INTEGER,
-          file_a_name TEXT,
-          file_b_name TEXT,
-          provider_type TEXT,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )`);
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  session_id TEXT UNIQUE,
+  month INTEGER,
+  year INTEGER,
+  file_a_name TEXT,
+  file_b_name TEXT,
+  provider_name TEXT,
+  provider_type TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+)`);
 
         // Table des versions de fichiers
         db.run(`CREATE TABLE IF NOT EXISTS file_versions (

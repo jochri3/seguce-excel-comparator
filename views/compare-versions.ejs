@@ -50,130 +50,203 @@
                 <h4 class="card-title mb-0">Différences entre les versions</h4>
             </div>
             <div class="card-body">
-               <!-- Dans views/compare-versions.ejs, remplacer la partie qui affiche les différences par: -->
-
-<% if (differences.length > 0) { %>
-    <div class="alert alert-info mb-4">
-        <i class="bi bi-info-circle-fill me-2"></i>
-        <strong><%= differences.length %> matricule(s)</strong> avec des différences entre la version <%= file1.version %> et la version <%= file2.version %>.
-    </div>
-    
-    <div class="accordion" id="differencesAccordion">
-        <% differences.forEach((diff, index) => { %>
-            <div class="accordion-item">
-                <h2 class="accordion-header" id="heading<%= index %>">
-                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse<%= index %>" aria-expanded="false" aria-controls="collapse<%= index %>">
-                        <div class="d-flex justify-content-between w-100">
-                            <span>
-                                <% if (diff.type === 'added') { %>
-                                    <span class="badge bg-success me-2">Ajouté</span>
-                                <% } else if (diff.type === 'removed') { %>
-                                    <span class="badge bg-danger me-2">Supprimé</span>
-                                <% } else { %>
-                                    <span class="badge bg-warning me-2">Modifié (<%= diff.totalChanges %> changements)</span>
-                                <% } %>
-                                <strong>Matricule: <%= diff.matricule %></strong>
-                            </span>
-                        </div>
-                    </button>
-                </h2>
-                <div id="collapse<%= index %>" class="accordion-collapse collapse" aria-labelledby="heading<%= index %>" data-bs-parent="#differencesAccordion">
-                    <div class="accordion-body">
-                        <% if (diff.type === 'added' || diff.type === 'removed') { %>
-                            <div class="alert alert-<%= diff.type === 'added' ? 'success' : 'danger' %>">
-                                <i class="bi bi-<%= diff.type === 'added' ? 'plus-circle' : 'dash-circle' %> me-2"></i>
-                                <strong><%= diff.message %></strong>
-                            </div>
-                            <% if (diff.details) { %>
-                                <table class="table table-sm table-striped">
-                                    <thead>
-                                        <tr>
-                                            <th>Colonne</th>
-                                            <th>Valeur</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <% Object.entries(diff.details).forEach(([key, value]) => { %>
-                                            <% if (key !== 'Matricule') { %>
-                                                <tr>
-                                                    <td><%= key %></td>
-                                                    <td><%= value %></td>
-                                                </tr>
-                                            <% } %>
-                                        <% }); %>
-                                    </tbody>
-                                </table>
-                            <% } %>
-                        <% } else if (diff.type === 'modified') { %>
-                            <!-- Affichage des changements dans les éléments fixes -->
-                            <% if (diff.fixedChanges && diff.fixedChanges.length > 0) { %>
-                                <h6 class="mt-3 text-danger">Changements dans les éléments fixes (<%= diff.fixedChanges.length %>)</h6>
-                                <div class="table-responsive">
-                                    <table class="table table-striped table-hover border-danger">
-                                        <thead class="table-danger">
-                                            <tr>
-                                                <th>Colonne</th>
-                                                <th>Version <%= file1.version %></th>
-                                                <th>Version <%= file2.version %></th>
-                                                <th>Changement</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <% diff.fixedChanges.forEach(change => { %>
-                                                <tr>
-                                                    <td><strong><%= change.column %></strong></td>
-                                                    <td><%= change.oldValue %></td>
-                                                    <td><%= change.newValue %></td>
-                                                    <td class="text-danger fw-bold"><%= change.difference %></td>
-                                                </tr>
-                                            <% }); %>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            <% } %>
-                            
-                            <!-- Affichage des changements dans les éléments variables -->
-                            <% if (diff.variableChanges && diff.variableChanges.length > 0) { %>
-                                <h6 class="mt-3">Changements dans les éléments variables (<%= diff.variableChanges.length %>)</h6>
-                                <div class="table-responsive">
-                                    <table class="table table-striped table-hover">
-                                        <thead class="table-dark">
-                                            <tr>
-                                                <th>Colonne</th>
-                                                <th>Version <%= file1.version %></th>
-                                                <th>Version <%= file2.version %></th>
-                                                <th>Changement</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <% diff.variableChanges.forEach(change => { %>
-                                                <tr>
-                                                    <td><strong><%= change.column %></strong></td>
-                                                    <td><%= change.oldValue %></td>
-                                                    <td><%= change.newValue %></td>
-                                                    <td class="text-<%= typeof change.difference === 'string' && change.difference.startsWith('+') ? 'success' : 'danger' %> fw-bold"><%= change.difference %></td>
-                                                </tr>
-                                            <% }); %>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            <% } %>
-                        <% } %>
+                <% if (differences && differences.length > 0) { %>
+                    <div class="alert alert-info mb-4">
+                        <i class="bi bi-info-circle-fill me-2"></i>
+                        <strong><%= matriculeCount %> matricule(s)</strong> présent(s), dont <strong><%= totalDifferences %> différence(s)</strong> détectée(s) entre la version <%= file1.version %> et la version <%= file2.version %>.
                     </div>
-                </div>
+                    
+                    <div class="accordion" id="differencesAccordion">
+                        <% differences.forEach((diff, index) => { %>
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="heading<%= index %>">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse<%= index %>" aria-expanded="false" aria-controls="collapse<%= index %>">
+                                        <div class="d-flex justify-content-between w-100">
+                                            <span>
+                                                <% if (diff.type === 'added') { %>
+                                                    <span class="badge bg-success me-2">Ajouté</span>
+                                                <% } else if (diff.type === 'removed') { %>
+                                                    <span class="badge bg-danger me-2">Supprimé</span>
+                                                <% } else { %>
+                                                    <span class="badge bg-warning me-2">Modifié (<%= diff.totalChanges %> changements)</span>
+                                                <% } %>
+                                                <strong>Matricule: <%= diff.matricule %></strong>
+                                            </span>
+                                        </div>
+                                    </button>
+                                </h2>
+                                <div id="collapse<%= index %>" class="accordion-collapse collapse" aria-labelledby="heading<%= index %>" data-bs-parent="#differencesAccordion">
+                                    <div class="accordion-body">
+                                        <% if (diff.type === 'added' || diff.type === 'removed') { %>
+                                            <div class="alert alert-<%= diff.type === 'added' ? 'success' : 'danger' %>">
+                                                <i class="bi bi-<%= diff.type === 'added' ? 'plus-circle' : 'dash-circle' %> me-2"></i>
+                                                <strong><%= diff.message %></strong>
+                                            </div>
+                                            <% if (diff.details) { %>
+                                                <table class="table table-sm table-striped">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Colonne</th>
+                                                            <th>Valeur</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <% Object.entries(diff.details).forEach(([key, value]) => { %>
+                                                            <% if (key !== 'Matricule' && !key.match(/^Col\d+$/)) { %>
+                                                                <tr>
+                                                                    <td><%= key %></td>
+                                                                    <td>
+                                                                        <% if (typeof value === 'number') { %>
+                                                                            <%= value.toLocaleString('fr-FR', {maximumFractionDigits: 2}) %>
+                                                                        <% } else { %>
+                                                                            <%= value %>
+                                                                        <% } %>
+                                                                    </td>
+                                                                </tr>
+                                                            <% } %>
+                                                        <% }); %>
+                                                    </tbody>
+                                                </table>
+                                            <% } %>
+                                        <% } else if (diff.type === 'modified') { %>
+                                            <!-- Affichage des changements dans les éléments fixes -->
+                                            <% if (diff.fixedChanges && diff.fixedChanges.length > 0) { %>
+                                                <h6 class="mt-3 text-danger">Changements dans les éléments fixes (<%= diff.fixedChanges.length %>)</h6>
+                                                <div class="table-responsive">
+                                                    <table class="table table-striped table-hover border-danger">
+                                                        <thead class="table-danger">
+                                                            <tr>
+                                                                <th>Colonne</th>
+                                                                <th>Version <%= file1.version %></th>
+                                                                <th>Version <%= file2.version %></th>
+                                                                <th>Changement</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            <% diff.fixedChanges.filter(change => !change.column.match(/^Col\d+$/)).forEach(change => { %>
+                                                                <tr>
+                                                                    <td><strong><%= change.column %></strong></td>
+                                                                    <td>
+                                                                        <% if (typeof change.oldValue === 'number') { %>
+                                                                            <%= change.oldValue.toLocaleString('fr-FR', {maximumFractionDigits: 2}) %>
+                                                                        <% } else { %>
+                                                                            <%= change.oldValue === undefined ? '-' : change.oldValue %>
+                                                                        <% } %>
+                                                                    </td>
+                                                                    <td>
+                                                                        <% if (typeof change.newValue === 'number') { %>
+                                                                            <%= change.newValue.toLocaleString('fr-FR', {maximumFractionDigits: 2}) %>
+                                                                        <% } else { %>
+                                                                            <%= change.newValue === undefined ? '-' : change.newValue %>
+                                                                        <% } %>
+                                                                    </td>
+                                                                    <td class="text-danger fw-bold"><%= change.difference %></td>
+                                                                </tr>
+                                                            <% }); %>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            <% } %>
+                                            
+                                            <!-- Affichage des changements dans les éléments variables -->
+                                            <% if (diff.variableChanges && diff.variableChanges.length > 0) { %>
+                                                <h6 class="mt-3">Changements dans les éléments variables (<%= diff.variableChanges.length %>)</h6>
+                                                <div class="table-responsive">
+                                                    <table class="table table-striped table-hover">
+                                                        <thead class="table-dark">
+                                                            <tr>
+                                                                <th>Colonne</th>
+                                                                <th>Version <%= file1.version %></th>
+                                                                <th>Version <%= file2.version %></th>
+                                                                <th>Changement</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            <% diff.variableChanges.filter(change => !change.column.match(/^Col\d+$/)).forEach(change => { %>
+                                                                <tr>
+                                                                    <td><strong><%= change.column %></strong></td>
+                                                                    <td>
+                                                                        <% if (typeof change.oldValue === 'number') { %>
+                                                                            <%= change.oldValue.toLocaleString('fr-FR', {maximumFractionDigits: 2}) %>
+                                                                        <% } else { %>
+                                                                            <%= change.oldValue === undefined ? '-' : change.oldValue %>
+                                                                        <% } %>
+                                                                    </td>
+                                                                    <td>
+                                                                        <% if (typeof change.newValue === 'number') { %>
+                                                                            <%= change.newValue.toLocaleString('fr-FR', {maximumFractionDigits: 2}) %>
+                                                                        <% } else { %>
+                                                                            <%= change.newValue === undefined ? '-' : change.newValue %>
+                                                                        <% } %>
+                                                                    </td>
+                                                                    <td class="text-<%= typeof change.difference === 'string' && change.difference.startsWith('+') ? 'success' : 'danger' %> fw-bold"><%= change.difference %></td>
+                                                                </tr>
+                                                            <% }); %>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            <% } %>
+                                        <% } %>
+                                    </div>
+                                </div>
+                            </div>
+                        <% }); %>
+                    </div>
+                <% } else { %>
+                    <div class="alert alert-success">
+                        <i class="bi bi-check-circle-fill me-2"></i>
+                        Aucune différence n'a été détectée entre les deux versions.
+                    </div>
+                <% } %>
             </div>
-        <% }); %>
-    </div>
-<% } else { %>
-    <div class="alert alert-success">
-        <i class="bi bi-check-circle-fill me-2"></i>
-        Aucune différence n'a été détectée entre les deux versions.
-    </div>
-<% } %>
-            </div>
+        </div>
+        
+        <!-- Bouton flottant pour remonter/descendre -->
+        <div class="scroll-top-btn up" id="scrollBtn">
+            <i class="bi bi-arrow-up"></i>
+            <i class="bi bi-arrow-down"></i>
         </div>
     </div>
 
     <%- include('partials/footer') %>
+    
+    <script>
+        // Script pour le bouton de défilement
+        document.addEventListener('DOMContentLoaded', function() {
+            const scrollBtn = document.getElementById('scrollBtn');
+            const midPoint = document.body.scrollHeight / 2;
+            
+            // Masquer le bouton par défaut
+            scrollBtn.style.display = 'none';
+            
+            window.addEventListener('scroll', function() {
+                // Afficher le bouton après un certain défilement
+                if (window.scrollY > 300) {
+                    scrollBtn.style.display = 'block';
+                } else {
+                    scrollBtn.style.display = 'none';
+                }
+                
+                // Changer la direction du bouton selon la position
+                if (window.scrollY < midPoint) {
+                    scrollBtn.classList.remove('up');
+                    scrollBtn.classList.add('down');
+                } else {
+                    scrollBtn.classList.remove('down');
+                    scrollBtn.classList.add('up');
+                }
+            });
+            
+            scrollBtn.addEventListener('click', function() {
+                if (scrollBtn.classList.contains('up')) {
+                    // Remonter en haut
+                    window.scrollTo({top: 0, behavior: 'smooth'});
+                } else {
+                    // Défiler jusqu'en bas
+                    window.scrollTo({top: document.body.scrollHeight, behavior: 'smooth'});
+                }
+            });
+        });
+    </script>
 </body>
 </html>

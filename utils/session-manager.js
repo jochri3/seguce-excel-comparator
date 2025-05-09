@@ -102,7 +102,7 @@ class SessionManager {
         SELECT fv.*, 
                CASE 
                  WHEN fv.file_type = 'fileA' THEN 'Fichier Fournisseur'
-                 ELSE 'Fichier SEGUCE RDC'
+                 ELSE 'Fichier SEGUCE'
                END as file_label
         FROM file_versions fv
         WHERE fv.session_id = ?
@@ -175,6 +175,21 @@ class SessionManager {
         if (err) reject(err);
         else resolve(rows);
       });
+    });
+  }
+
+  static async updateSessionProvider(sessionId, providerName) {
+    const db = await getDatabase();
+
+    return new Promise((resolve, reject) => {
+      db.run(
+        "UPDATE sessions SET provider_name = ? WHERE session_id = ?",
+        [providerName, sessionId],
+        function (err) {
+          if (err) reject(err);
+          else resolve(this.changes);
+        }
+      );
     });
   }
 }

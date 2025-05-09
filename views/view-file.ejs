@@ -3,37 +3,47 @@
 <head>
     <%- include('partials/header') %>
     <title><%= title %></title>
-    <style>
-        /* Assurer que le tableau peut défiler horizontalement */
-        .table-wrapper {
-            width: 100%;
-            overflow-x: auto;
-            max-height: 600px; /* Hauteur maximale avant défilement vertical */
-            overflow-y: auto;
-        }
-        
-        /* Style pour la ligne de totaux */
-        .totals-row {
-            background-color: #e7f1ff;
-            font-weight: bold;
-        }
-        
-        /* Fixer la largeur minimale des cellules pour éviter le texte compressé */
-        .table th, .table td {
-            min-width: 120px;
-            white-space: nowrap;
-            padding: 8px 15px;
-        }
-        
-        /* Fixer l'en-tête du tableau lors du défilement vertical */
-        .table thead th {
-            position: sticky;
-            top: 0;
-            background-color: #f8f9fa;
-            z-index: 10;
-            box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
-        }
-    </style>
+   <style>
+    /* Assurer que le tableau peut défiler horizontalement */
+    .table-wrapper {
+        width: 100%;
+        overflow-x: auto;
+        max-height: 600px; /* Hauteur maximale avant défilement vertical */
+        overflow-y: auto;
+        position: relative; /* Pour le positionnement des éléments fixes */
+    }
+    
+    /* Style pour la ligne de totaux */
+    .totals-row {
+        background-color: #e7f1ff;
+        font-weight: bold;
+    }
+    
+    /* Fixer la largeur minimale des cellules pour éviter le texte compressé */
+    .table th, .table td {
+        min-width: 120px;
+        white-space: nowrap;
+        padding: 8px 15px;
+    }
+    
+    /* Fixer l'en-tête du tableau lors du défilement vertical */
+    .table thead th {
+        position: sticky;
+        top: 0;
+        background-color: #f8f9fa;
+        z-index: 10;
+        box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Fixer les totaux en bas du tableau */
+    .table tfoot tr {
+        position: sticky;
+        bottom: 0;
+        background-color: #e7f1ff;
+        z-index: 10;
+        box-shadow: 0 -2px 2px -1px rgba(0, 0, 0, 0.1);
+    }
+</style>
 </head>
 <body>
     <div class="container">

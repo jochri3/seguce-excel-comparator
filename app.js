@@ -88,19 +88,36 @@ app.post(
       const fileAName = req.files.fileA[0].originalname;
       const fileBName = req.files.fileB[0].originalname;
 
+      // Vérifier que les fichiers sont au bon format et au bon emplacement
+      const fileAIsProvider = excelParser.isProviderFile(fileAName);
+      const fileBIsSeguce = excelParser.isSegucefile(fileBName);
+
+      // Si les fichiers sont inversés, afficher un avertissement
+      if (!fileAIsProvider || !fileBIsSeguce) {
+        return res.render("file-validation", {
+          title: "Validation des fichiers",
+          fileAName,
+          fileBName,
+          fileAIsProvider,
+          fileBIsSeguce,
+          fileAPath,
+          fileBPath,
+        });
+      }
+
       // Traitement des fichiers Excel
       const fileAData = await excelParser.parseExcelFile(fileAPath);
       const fileBData = await excelParser.parseExcelFile(fileBPath);
 
-      // Extraire les informations de date du nom de fichier
-      const dateInfoA = excelParser.extractDateFromFilename(fileAName);
-      const dateInfoB = excelParser.extractDateFromFilename(fileBName);
+      // Extraire les informations de date et fournisseur du nom de fichier
+      const infoA = excelParser.extractInfoFromFilename(fileAName);
+      const infoB = excelParser.extractInfoFromFilename(fileBName);
 
       if (
-        !dateInfoA ||
-        !dateInfoB ||
-        dateInfoA.month !== dateInfoB.month ||
-        dateInfoA.year !== dateInfoB.year
+        !infoA ||
+        !infoB ||
+        infoA.month !== infoB.month ||
+        infoA.year !== infoB.year
       ) {
         return res.status(400).render("error", {
           title: "Erreur",
@@ -109,13 +126,28 @@ app.post(
         });
       }
 
-      const { month, year } = dateInfoA;
+      const { month, year } = infoA;
+      const providerName = infoA.providerName;
 
       // Détecter le type de prestataire
       const providerType = excelParser.detectProviderType(fileAData.headers);
 
+      // Détecter les colonnes dupliquées
+      const duplicateColumnsA = excelParser.detectDuplicateColumns(
+        fileAData.headers
+      );
+      const duplicateColumnsB = excelParser.detectDuplicateColumns(
+        fileBData.headers
+      );
+
       // Obtenir ou créer la session pour ce mois
       const session = await SessionManager.getOrCreateSession(month, year);
+
+      // Mettre à jour le nom du fournisseur dans la session
+      await SessionManager.updateSessionProvider(
+        session.session_id,
+        providerName
+      );
 
       // Vérifier si les fichiers existent déjà
       const existingFiles = await SessionManager.getSessionHistory(
@@ -163,6 +195,12 @@ app.post(
         fileBData
       );
 
+      // Ajouter des informations sur les colonnes dupliquées
+      comparisonResult.duplicateColumns = {
+        fileA: duplicateColumnsA,
+        fileB: duplicateColumnsB,
+      };
+
       // Sauvegarder les résultats de comparaison
       await SessionManager.saveComparisonResult(
         session.session_id,
@@ -179,17 +217,22 @@ app.post(
       req.app.locals.fileBName = fileBName;
       req.app.locals.fileAData = fileAData;
       req.app.locals.fileBData = fileBData;
+      req.app.locals.providerName = providerName;
+
       res.render("compare", {
         title: "Résultats de la réconciliation",
-        fileAName, // Nom du fichier prestataire paie
-        fileBName, // Nom du fichier SEGUCE
+        fileAName,
+        fileBName,
         comparisonResult,
         summary,
         session,
         isUpdate,
         providerType,
+        providerName,
         fileAVersion: fileASaved.version,
         fileBVersion: fileBSaved.version,
+        duplicateColumnsA,
+        duplicateColumnsB,
       });
 
       // Nettoyer les fichiers uploadés après traitement
@@ -1084,7 +1127,7 @@ app.get(
 
       // Déterminer le label du fichier
       const fileLabel =
-        fileType === "fileA" ? "Fichier Fournisseur" : "Fichier SEGUCE RDC";
+        fileType === "fileA" ? "Fichier Fournisseur" : "Fichier SEGUCE";
 
       res.render("view-file", {
         title: `${fileLabel} (v${version})`,
@@ -1203,7 +1246,7 @@ app.get(
 
       // Récupérer les deux versions du fichier
       const db = await getDatabase();
-      const [file1, file2] = await Promise.all([
+      const [file1, file2, sessionInfo] = await Promise.all([
         new Promise((resolve, reject) => {
           db.get(
             "SELECT * FROM file_versions WHERE session_id = ? AND file_type = ? AND version = ?",
@@ -1224,6 +1267,16 @@ app.get(
             }
           );
         }),
+        new Promise((resolve, reject) => {
+          db.get(
+            "SELECT * FROM sessions WHERE session_id = ?",
+            [sessionId],
+            (err, row) => {
+              if (err) reject(err);
+              else resolve(row);
+            }
+          );
+        }),
       ]);
 
       if (!file1 || !file2) {
@@ -1233,122 +1286,21 @@ app.get(
         });
       }
 
+      // Récupérer le nom du fournisseur
+      const providerName = sessionInfo
+        ? sessionInfo.provider_name || "Fournisseur"
+        : "Fournisseur";
+
       // Convertir les données JSON en objets
       const data1 = JSON.parse(file1.data);
       const data2 = JSON.parse(file2.data);
 
-      // Comparer les deux versions (implémentation simplifiée)
-      // Comparer les deux versions de manière plus détaillée
-      const differences = [];
-      const allMatricules = new Set();
-
-      // Collecter tous les matricules uniques des deux versions
-      data1.forEach((row) => {
-        if (row.Matricule) allMatricules.add(row.Matricule);
-      });
-      data2.forEach((row) => {
-        if (row.Matricule) allMatricules.add(row.Matricule);
-      });
-
-      // Analyser les différences matricule par matricule
-      allMatricules.forEach((matricule) => {
-        const row1 = data1.find((r) => r.Matricule === matricule);
-        const row2 = data2.find((r) => r.Matricule === matricule);
-
-        if (!row1 && row2) {
-          // Matricule ajouté dans la version 2
-          differences.push({
-            matricule,
-            type: "added",
-            message: `Matricule ajouté dans la version ${version2}`,
-            details: row2,
-          });
-        } else if (row1 && !row2) {
-          // Matricule supprimé dans la version 2
-          differences.push({
-            matricule,
-            type: "removed",
-            message: `Matricule supprimé dans la version ${version2}`,
-            details: row1,
-          });
-        } else if (row1 && row2) {
-          // Comparer les valeurs des colonnes de manière plus détaillée
-          const columnDiffs = [];
-          const allColumns = new Set([
-            ...Object.keys(row1),
-            ...Object.keys(row2),
-          ]);
-
-          allColumns.forEach((column) => {
-            if (column === "Matricule") return; // Ignorer la colonne Matricule dans la comparaison
-
-            const val1 = row1[column];
-            const val2 = row2[column];
-
-            // Si la colonne existe dans les deux versions et les valeurs sont différentes
-            if (val1 !== undefined && val2 !== undefined && val1 !== val2) {
-              // Déterminer le type de colonne (fixe ou variable)
-              const columnType = isFixedColumn(column) ? "fixe" : "variable";
-
-              // Calculer la différence pour les valeurs numériques
-              let difference = "Modifié";
-              if (typeof val1 === "number" && typeof val2 === "number") {
-                const diff = val2 - val1;
-                difference = diff > 0 ? `+${diff.toFixed(2)}` : diff.toFixed(2);
-              }
-
-              columnDiffs.push({
-                column,
-                oldValue: val1,
-                newValue: val2,
-                difference,
-                type: columnType,
-              });
-            }
-            // Si la colonne existe uniquement dans une version
-            else if (val1 !== undefined && val2 === undefined) {
-              columnDiffs.push({
-                column,
-                oldValue: val1,
-                newValue: "-",
-                difference: "Supprimé",
-                type: isFixedColumn(column) ? "fixe" : "variable",
-              });
-            } else if (val1 === undefined && val2 !== undefined) {
-              columnDiffs.push({
-                column,
-                oldValue: "-",
-                newValue: val2,
-                difference: "Ajouté",
-                type: isFixedColumn(column) ? "fixe" : "variable",
-              });
-            }
-          });
-
-          // Ajouter seulement s'il y a des différences
-          if (columnDiffs.length > 0) {
-            // Grouper les différences par type
-            const fixedChanges = columnDiffs.filter(
-              (diff) => diff.type === "fixe"
-            );
-            const variableChanges = columnDiffs.filter(
-              (diff) => diff.type === "variable"
-            );
-
-            differences.push({
-              matricule,
-              type: "modified",
-              fixedChanges,
-              variableChanges,
-              totalChanges: columnDiffs.length,
-            });
-          }
-        }
-      });
+      // Comparer les deux versions avec la nouvelle fonction
+      const comparisonResult = excelParser.compareFileVersions(data1, data2);
 
       // Déterminer le label du fichier
       const fileLabel =
-        fileType === "fileA" ? "Fichier Fournisseur" : "Fichier SEGUCE RDC";
+        fileType === "fileA" ? `Fichier ${providerName}` : "Fichier SEGUCE";
 
       res.render("compare-versions", {
         title: `Comparaison de versions - ${fileLabel}`,
@@ -1362,8 +1314,11 @@ app.get(
           version: version2,
           createdAt: file2.created_at,
         },
-        differences,
+        differences: comparisonResult.differences,
+        totalDifferences: comparisonResult.totalDifferences,
+        matriculeCount: comparisonResult.matriculeCount,
         fileLabel,
+        providerName,
         sessionId,
       });
     } catch (error) {
